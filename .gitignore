@@ -1,0 +1,14 @@
+.DS_Store
+Thumbs.db
+
+node_modules/
+vendor/
+
+*.log
+debug.log
+
+.vscode/
+.idea/
+
+dist/
+build/
