@@ -1,0 +1,13 @@
+{
+  "name": "franklynokafor/detit",
+  "description": "AI Content Generator for WooCommerce",
+  "type": "wordpress-plugin",
+  "autoload": {
+    "psr-4": {
+      "DetIt\\": "src/"
+    }
+  },
+  "require": {
+    "php": "^8.1"
+  }
+}
