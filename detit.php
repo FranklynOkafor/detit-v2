@@ -46,15 +46,26 @@ if (file_exists($autoload)) {
 |--------------------------------------------------------------------------
 */
 
-// require_once DETIT_PATH . 'includes/class-requirements.php';
-// require_once DETIT_PATH . 'includes/class-activator.php';
-// require_once DETIT_PATH . 'includes/class-deactivator.php';
-// require_once DETIT_PATH . 'includes/class-plugin.php';
+require_once DETIT_PATH . 'includes/class-requirements.php';
+require_once DETIT_PATH . 'includes/class-activator.php';
+require_once DETIT_PATH . 'includes/class-deactivator.php';
+require_once DETIT_PATH . 'includes/class-plugin.php';
 
-require_once __DIR__ . '/includes/class-requirements.php';
-require_once __DIR__ . '/includes/class-activator.php';
-require_once __DIR__ . '/includes/class-deactivator.php';
-require_once __DIR__ . '/includes/class-plugin.php';
+// require_once __DIR__ . '/includes/class-requirements.php';
+// require_once __DIR__ . '/includes/class-activator.php';
+// require_once __DIR__ . '/includes/class-deactivator.php';
+// require_once __DIR__ . '/includes/class-plugin.php';
+
+
+/*
+|--------------------------------------------------------------------------
+| Load Autoload
+|--------------------------------------------------------------------------
+*/
+
+
+require_once __DIR__ . '/vendor/autoload.php';
+
 
 /*
 |--------------------------------------------------------------------------
@@ -80,3 +91,9 @@ add_action('plugins_loaded', function () {
 	$plugin = new DetIt_Plugin();
 	$plugin->run();
 });
+
+
+// Tester
+
+
+// $plugin = new \DetIt\Plugin();
