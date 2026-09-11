@@ -58,6 +58,7 @@ class DatabaseInstaller
 
         $runsTable = $wpdb->prefix . 'detit_runs';
         $runItemsTable = $wpdb->prefix . 'detit_run_items';
+        $generationsTable = $wpdb->prefix . 'detit_generations';
 
         $runsSchema = "CREATE TABLE {$runsTable} (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -94,9 +95,35 @@ class DatabaseInstaller
 		KEY status (status)
 	) {$charsetCollate};";
 
+
+        $generationsSchema = "CREATE TABLE {$generationsTable} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        product_id bigint(20) unsigned NOT NULL,
+        run_id bigint(20) unsigned NULL DEFAULT NULL,
+        user_id bigint(20) unsigned NOT NULL,
+        operation varchar(30) NOT NULL DEFAULT 'generate',
+        provider varchar(100) NULL DEFAULT NULL,
+        model varchar(191) NULL DEFAULT NULL,
+        template varchar(100) NULL DEFAULT NULL,
+        language varchar(20) NULL DEFAULT NULL,
+        before_snapshot longtext NULL,
+        generated_snapshot longtext NULL,
+        applied_fields longtext NULL,
+        status varchar(20) NOT NULL DEFAULT 'pending',
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        PRIMARY KEY  (id),
+        KEY product_id (product_id),
+        KEY run_id (run_id),
+        KEY user_id (user_id),
+        KEY status (status),
+        KEY created_at (created_at)
+    ) {$charsetCollate};";
+
         return [
             $runsSchema,
             $runItemsSchema,
+            $generationsSchema,
         ];
     }
 }
