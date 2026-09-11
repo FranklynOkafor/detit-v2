@@ -52,7 +52,32 @@ class DatabaseInstaller
 
     private function getTableSchemas(): array
     {
-        // Stages 11–14 will add DetIt's table schemas here.
-        return [];
+        global $wpdb;
+
+        $charsetCollate = $wpdb->get_charset_collate();
+
+        $runsTable = $wpdb->prefix . 'detit_runs';
+
+        $runsSchema = "CREATE TABLE {$runsTable} (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		user_id bigint(20) unsigned NOT NULL,
+		status varchar(20) NOT NULL DEFAULT 'pending',
+		total bigint(20) unsigned NOT NULL DEFAULT 0,
+		pending bigint(20) unsigned NOT NULL DEFAULT 0,
+		running bigint(20) unsigned NOT NULL DEFAULT 0,
+		completed bigint(20) unsigned NOT NULL DEFAULT 0,
+		failed bigint(20) unsigned NOT NULL DEFAULT 0,
+		settings_json longtext NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY user_id (user_id),
+		KEY status (status),
+		KEY created_at (created_at)
+	) {$charsetCollate};";
+
+        return [
+            $runsSchema,
+        ];
     }
 }
