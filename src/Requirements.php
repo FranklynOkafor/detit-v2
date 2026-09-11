@@ -19,9 +19,9 @@ class Requirements
 
 		global $wp_version;
 
-		if (version_compare($wp_version, '7.0', '<')) {
+		if (version_compare($wp_version, '6.5', '<')) {
 			add_action('admin_notices', function () {
-				echo '<div class="notice notice-error"><p><strong>DetIt</strong> requires WordPress 7.0 or higher.</p></div>';
+				echo '<div class="notice notice-error"><p><strong>DetIt</strong> requires WordPress 6.5 or higher.</p></div>';
 			});
 
 			return false;

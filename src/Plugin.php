@@ -1,5 +1,8 @@
 <?php
+
 namespace DetIt;
+
+use DetIt\Admin\Menu;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -9,12 +12,11 @@ class Plugin
 {
 	public function init(): void
 	{
-
-        // Load translations.
+		// Load translations.
 		add_action('init', [$this, 'loadTextDomain']);
 
-		// Admin features
-		add_action('admin_init', [$this, 'bootAdmin']);
+		// Admin features.
+		$this->bootAdmin();
 
 		// Placeholder boot methods for future stages.
 		$this->bootRest();
@@ -24,7 +26,7 @@ class Plugin
 		$this->bootQueue();
 	}
 
-    public function loadTextDomain(): void
+	public function loadTextDomain(): void
 	{
 		load_plugin_textdomain(
 			'detit-product-content-generator-for-woocommerce',
@@ -35,7 +37,7 @@ class Plugin
 
 	private function bootAdmin(): void
 	{
-		// Stage 9 will add the admin menu.
+		(new Menu())->registerHooks();
 	}
 
 	private function bootRest(): void

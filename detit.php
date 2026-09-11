@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: DetIt AI Content Generator for WooCommerce
  * Plugin URI: https://github.com/Franklyn-Okafor/DetIt
@@ -48,11 +49,15 @@ register_deactivation_hook(DETIT_FILE, [DetIt\Deactivator::class, 'deactivate'])
 /*
 |--------------------------------------------------------------------------
 | Bootstrap Plugin
+| Wait till all the plugins are loaded (because of the dependencies)
 |--------------------------------------------------------------------------
 */
 
-if (! DetIt\Requirements::check()) {
-	return;
-}
+add_action('plugins_loaded', static function (): void {
 
-(new DetIt\Plugin())->init();
+	if (! DetIt\Requirements::check()) {
+		return;
+	}
+
+	(new DetIt\Plugin())->init();
+}, 20);
