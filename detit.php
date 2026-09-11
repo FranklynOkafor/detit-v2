@@ -30,42 +30,21 @@ define('DETIT_URL', plugin_dir_url(__FILE__));
 
 /*
 |--------------------------------------------------------------------------
-| Composer Autoloader
+| Composer
 |--------------------------------------------------------------------------
 */
 
-$autoload = DETIT_PATH . 'vendor/autoload.php';
-
-if (file_exists($autoload)) {
-	require_once $autoload;
-}
+require_once DETIT_PATH . 'vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
-| Load Core Classes
+| Core Bootstrap Classes
 |--------------------------------------------------------------------------
 */
 
 require_once DETIT_PATH . 'includes/class-requirements.php';
 require_once DETIT_PATH . 'includes/class-activator.php';
 require_once DETIT_PATH . 'includes/class-deactivator.php';
-require_once DETIT_PATH . 'includes/class-plugin.php';
-
-// require_once __DIR__ . '/includes/class-requirements.php';
-// require_once __DIR__ . '/includes/class-activator.php';
-// require_once __DIR__ . '/includes/class-deactivator.php';
-// require_once __DIR__ . '/includes/class-plugin.php';
-
-
-/*
-|--------------------------------------------------------------------------
-| Load Autoload
-|--------------------------------------------------------------------------
-*/
-
-
-require_once __DIR__ . '/vendor/autoload.php';
-
 
 /*
 |--------------------------------------------------------------------------
@@ -82,18 +61,8 @@ register_deactivation_hook(DETIT_FILE, ['DetIt_Deactivator', 'deactivate']);
 |--------------------------------------------------------------------------
 */
 
-add_action('plugins_loaded', function () {
+if (! DetIt_Requirements::check()) {
+	return;
+}
 
-	if (! DetIt_Requirements::check()) {
-		return;
-	}
-
-	$plugin = new DetIt_Plugin();
-	$plugin->run();
-});
-
-
-// Tester
-
-
-// $plugin = new \DetIt\Plugin();
+(new DetIt\Plugin())->init();
