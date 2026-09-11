@@ -1,10 +1,11 @@
 <?php
+namespace DetIt;
 
 if (! defined('ABSPATH')) {
 	exit;
 }
 
-class DetIt_Activator
+class Activator
 {
 	public static function activate()
 	{

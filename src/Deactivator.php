@@ -1,10 +1,11 @@
 <?php
+namespace DetIt;
 
 if (! defined('ABSPATH')) {
 	exit;
 }
 
-class DetIt_Deactivator
+class Deactivator
 {
 	public static function deactivate()
 	{

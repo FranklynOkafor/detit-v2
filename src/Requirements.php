@@ -1,10 +1,11 @@
 <?php
+namespace DetIt;
 
 if (! defined('ABSPATH')) {
 	exit;
 }
 
-class DetIt_Requirements
+class Requirements
 {
 	public static function check()
 	{

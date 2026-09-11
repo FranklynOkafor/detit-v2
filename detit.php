@@ -38,22 +38,12 @@ require_once DETIT_PATH . 'vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
-| Core Bootstrap Classes
-|--------------------------------------------------------------------------
-*/
-
-require_once DETIT_PATH . 'includes/class-requirements.php';
-require_once DETIT_PATH . 'includes/class-activator.php';
-require_once DETIT_PATH . 'includes/class-deactivator.php';
-
-/*
-|--------------------------------------------------------------------------
 | Activation & Deactivation
 |--------------------------------------------------------------------------
 */
 
-register_activation_hook(DETIT_FILE, ['DetIt_Activator', 'activate']);
-register_deactivation_hook(DETIT_FILE, ['DetIt_Deactivator', 'deactivate']);
+register_activation_hook(DETIT_FILE, [DetIt\Activator::class, 'activate']);
+register_deactivation_hook(DETIT_FILE, [DetIt\Deactivator::class, 'deactivate']);
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +51,7 @@ register_deactivation_hook(DETIT_FILE, ['DetIt_Deactivator', 'deactivate']);
 |--------------------------------------------------------------------------
 */
 
-if (! DetIt_Requirements::check()) {
+if (! DetIt\Requirements::check()) {
 	return;
 }
 
