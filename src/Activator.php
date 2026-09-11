@@ -1,14 +1,18 @@
 <?php
 namespace DetIt;
 
+use DetIt\Storage\DatabaseInstaller;
+
 if (! defined('ABSPATH')) {
-	exit;
+    exit;
 }
 
 class Activator
 {
-	public static function activate()
+	public static function activate(): void
 	{
+		(new DatabaseInstaller())->install();
+
 		flush_rewrite_rules();
 	}
 }

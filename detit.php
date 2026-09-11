@@ -25,6 +25,7 @@ if (! defined('ABSPATH')) {
 */
 
 define('DETIT_VERSION', '2.0.0');
+define('DETIT_DB_VERSION', '1.0.0');
 define('DETIT_FILE', __FILE__);
 define('DETIT_PATH', plugin_dir_path(__FILE__));
 define('DETIT_URL', plugin_dir_url(__FILE__));
@@ -37,14 +38,19 @@ define('DETIT_URL', plugin_dir_url(__FILE__));
 
 require_once DETIT_PATH . 'vendor/autoload.php';
 
+use DetIt\Activator;
+use DetIt\Deactivator;
+use DetIt\Plugin;
+use DetIt\Requirements;
+
 /*
 |--------------------------------------------------------------------------
 | Activation & Deactivation
 |--------------------------------------------------------------------------
 */
 
-register_activation_hook(DETIT_FILE, [DetIt\Activator::class, 'activate']);
-register_deactivation_hook(DETIT_FILE, [DetIt\Deactivator::class, 'deactivate']);
+register_activation_hook(DETIT_FILE, [Activator::class, 'activate']);
+register_deactivation_hook(DETIT_FILE, [Deactivator::class, 'deactivate']);
 
 /*
 |--------------------------------------------------------------------------
@@ -55,9 +61,9 @@ register_deactivation_hook(DETIT_FILE, [DetIt\Deactivator::class, 'deactivate'])
 
 add_action('plugins_loaded', static function (): void {
 
-	if (! DetIt\Requirements::check()) {
+	if (! Requirements::check()) {
 		return;
 	}
 
-	(new DetIt\Plugin())->init();
+	(new Plugin())->init();
 }, 20);

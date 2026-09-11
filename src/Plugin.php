@@ -3,6 +3,7 @@
 namespace DetIt;
 
 use DetIt\Admin\Menu;
+use DetIt\Storage\DatabaseInstaller;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -48,7 +49,9 @@ class Plugin
 	private function bootDatabase(): void
 	{
 		// Stage 10.
-	}
+		(new DatabaseInstaller())->maybeUpgrade();
+
+	}	
 
 	private function bootWooCommerce(): void
 	{
