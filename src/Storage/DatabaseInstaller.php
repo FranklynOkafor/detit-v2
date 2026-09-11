@@ -57,6 +57,7 @@ class DatabaseInstaller
         $charsetCollate = $wpdb->get_charset_collate();
 
         $runsTable = $wpdb->prefix . 'detit_runs';
+        $runItemsTable = $wpdb->prefix . 'detit_run_items';
 
         $runsSchema = "CREATE TABLE {$runsTable} (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -76,8 +77,26 @@ class DatabaseInstaller
 		KEY created_at (created_at)
 	) {$charsetCollate};";
 
+        $runItemsSchema = "CREATE TABLE {$runItemsTable} (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		run_id bigint(20) unsigned NOT NULL,
+		product_id bigint(20) unsigned NOT NULL,
+		status varchar(20) NOT NULL DEFAULT 'pending',
+		attempt_count smallint(5) unsigned NOT NULL DEFAULT 0,
+		action_id bigint(20) unsigned NULL DEFAULT NULL,
+		error_code varchar(100) NULL DEFAULT NULL,
+		error_message text NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY run_id (run_id),
+		KEY product_id (product_id),
+		KEY status (status)
+	) {$charsetCollate};";
+
         return [
             $runsSchema,
+            $runItemsSchema,
         ];
     }
 }
