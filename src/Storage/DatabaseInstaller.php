@@ -11,15 +11,16 @@ class DatabaseInstaller
     private const VERSION_OPTION = 'detit_db_version';
 
     public function install(): void
-    {
-        $this->createOrUpdateTables();
+{
 
-        update_option(
-            self::VERSION_OPTION,
-            DETIT_DB_VERSION,
-            false
-        );
-    }
+    $this->createOrUpdateTables();
+
+    update_option(
+        self::VERSION_OPTION,
+        DETIT_DB_VERSION,
+        false
+    );
+}
 
     public function maybeUpgrade(): void
     {
@@ -59,6 +60,7 @@ class DatabaseInstaller
         $runsTable = $wpdb->prefix . 'detit_runs';
         $runItemsTable = $wpdb->prefix . 'detit_run_items';
         $generationsTable = $wpdb->prefix . 'detit_generations';
+        $productIndexTable = $wpdb->prefix . 'detit_product_index';
 
         $runsSchema = "CREATE TABLE {$runsTable} (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -120,10 +122,26 @@ class DatabaseInstaller
         KEY created_at (created_at)
     ) {$charsetCollate};";
 
+
+
+        $productIndexSchema = "CREATE TABLE {$productIndexTable} (
+    id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    product_id bigint(20) unsigned NOT NULL,
+    content_health tinyint(3) unsigned NOT NULL DEFAULT 0,
+    issue_flags longtext NOT NULL,
+    source_hash char(64) NOT NULL DEFAULT '',
+    last_scanned_at datetime NULL DEFAULT NULL,
+    last_optimized_at datetime NULL DEFAULT NULL,
+    PRIMARY KEY  (id),
+    UNIQUE KEY product_id (product_id),
+    KEY content_health (content_health)
+) {$charsetCollate};";
+
         return [
             $runsSchema,
             $runItemsSchema,
             $generationsSchema,
+            $productIndexSchema,
         ];
     }
 }

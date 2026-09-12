@@ -25,7 +25,7 @@ if (! defined('ABSPATH')) {
 */
 
 define('DETIT_VERSION', '2.0.0');
-define('DETIT_DB_VERSION', '1.3.0');
+define('DETIT_DB_VERSION', '1.4.1');
 define('DETIT_FILE', __FILE__);
 define('DETIT_PATH', plugin_dir_path(__FILE__));
 define('DETIT_URL', plugin_dir_url(__FILE__));
