@@ -8,6 +8,15 @@ if (! defined('ABSPATH')) {
 
 final class WordPressAIClientGateway implements AIClientGatewayInterface
 {
+    private WordPressAIErrorNormalizer $errorNormalizer;
+
+    public function __construct(
+        ?WordPressAIErrorNormalizer $errorNormalizer = null
+    ) {
+        $this->errorNormalizer = $errorNormalizer
+            ?? new WordPressAIErrorNormalizer();
+    }
+
     public function generate(
         GenerationRequest $request
     ): GenerationResult {
@@ -18,7 +27,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
          */
         if (! function_exists('wp_ai_client_prompt')) {
             return GenerationResult::failure(
-                'wordpress_ai_unavailable',
+                AIErrorCode::NO_AI_PROVIDER->value,
                 'The WordPress AI Client is unavailable.'
             );
         }
@@ -56,7 +65,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
              */
             if (! $builder->is_supported_for_text_generation()) {
                 return GenerationResult::failure(
-                    'wordpress_ai_text_generation_unsupported',
+                    AIErrorCode::NO_AI_PROVIDER->value,
                     'No configured AI provider supports this text generation request.'
                 );
             }
@@ -69,9 +78,13 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
             $result = $builder->generate_text_result();
 
             if (is_wp_error($result)) {
+                $normalized = $this->errorNormalizer->normalize(
+                    $result
+                );
+
                 return GenerationResult::failure(
-                    (string) $result->get_error_code(),
-                    $result->get_error_message()
+                    $normalized['code'],
+                    $normalized['message']
                 );
             }
 
@@ -98,15 +111,9 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
 
         } catch (\Throwable $throwable) {
 
-            /*
-             * This is intentionally generic in Stage 20.
-             *
-             * Stage 21 will normalize WordPress/provider
-             * failures into DetIt's permanent error codes.
-             */
             return GenerationResult::failure(
-                'wordpress_ai_exception',
-                $throwable->getMessage()
+                AIErrorCode::UNKNOWN_ERROR->value,
+                'An unexpected AI error occurred.'
             );
         }
     }

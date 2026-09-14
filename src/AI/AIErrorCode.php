@@ -1,0 +1,24 @@
+<?php
+
+namespace DetIt\AI;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+enum AIErrorCode: string
+{
+    case NO_AI_PROVIDER = 'NO_AI_PROVIDER';
+
+    case AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR';
+
+    case RATE_LIMIT = 'RATE_LIMIT';
+
+    case PROVIDER_TIMEOUT = 'PROVIDER_TIMEOUT';
+
+    case PROVIDER_UNAVAILABLE = 'PROVIDER_UNAVAILABLE';
+
+    case INVALID_AI_RESPONSE = 'INVALID_AI_RESPONSE';
+
+    case UNKNOWN_ERROR = 'UNKNOWN_ERROR';
+}
