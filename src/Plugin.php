@@ -4,6 +4,7 @@ namespace DetIt;
 
 use DetIt\Admin\Menu;
 use DetIt\Storage\DatabaseInstaller;
+use DetIt\Admin\BrandProfileSettingsPage;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -39,6 +40,9 @@ class Plugin
 	private function bootAdmin(): void
 	{
 		(new Menu())->registerHooks();
+		if (is_admin()) {
+			(new BrandProfileSettingsPage())->register();
+		}
 	}
 
 	private function bootRest(): void
@@ -50,8 +54,7 @@ class Plugin
 	{
 		// Stage 10.
 		(new DatabaseInstaller())->maybeUpgrade();
-
-	}	
+	}
 
 	private function bootWooCommerce(): void
 	{
