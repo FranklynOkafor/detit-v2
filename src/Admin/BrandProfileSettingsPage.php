@@ -63,8 +63,9 @@ final class BrandProfileSettingsPage
             self::OPTION_GROUP,
             self::OPTION_NAME,
             [
-                'type'    => 'array',
-                'default' => self::defaults(),
+                'type'              => 'array',
+                'default'           => self::defaults(),
+                'sanitize_callback' => [$this, 'sanitize_brand_profile'],
             ]
         );
 
@@ -151,7 +152,6 @@ final class BrandProfileSettingsPage
                 esc_attr($fieldName),
                 esc_textarea($value)
             );
-
         } else {
 
             printf(
@@ -185,7 +185,7 @@ final class BrandProfileSettingsPage
             return;
         }
 
-        ?>
+?>
         <div class="wrap">
 
             <h1>
@@ -217,8 +217,132 @@ final class BrandProfileSettingsPage
             </form>
 
         </div>
-        <?php
+<?php
     }
+
+
+    /**
+     * Sanitize the DetIt Brand Profile before saving.
+     *
+     * @param mixed $input Submitted Brand Profile data.
+     *
+     * @return array<string, string>
+     */
+    public function sanitize_brand_profile($input): array
+    {
+        if (! is_array($input)) {
+            return self::defaults();
+        }
+
+        $fields = [
+            'store_name' => [
+                'type' => 'text',
+                'max'  => 120,
+            ],
+            'industry' => [
+                'type' => 'text',
+                'max'  => 100,
+            ],
+            'target_audience' => [
+                'type' => 'textarea',
+                'max'  => 500,
+            ],
+            'market' => [
+                'type' => 'text',
+                'max'  => 150,
+            ],
+            'language_variant' => [
+                'type' => 'text',
+                'max'  => 80,
+            ],
+            'tone' => [
+                'type' => 'text',
+                'max'  => 100,
+            ],
+            'style' => [
+                'type' => 'textarea',
+                'max'  => 500,
+            ],
+            'preferred_words' => [
+                'type' => 'textarea',
+                'max'  => 500,
+            ],
+            'avoided_words' => [
+                'type' => 'textarea',
+                'max'  => 500,
+            ],
+            'cta_style' => [
+                'type' => 'textarea',
+                'max'  => 300,
+            ],
+            'additional_instructions' => [
+                'type' => 'textarea',
+                'max'  => 1500,
+            ],
+        ];
+
+        $sanitized = self::defaults();
+
+        foreach ($fields as $key => $rules) {
+            if (! array_key_exists($key, $input)) {
+                continue;
+            }
+
+            $value = $input[$key];
+
+            if (! is_scalar($value)) {
+                $sanitized[$key] = '';
+                continue;
+            }
+
+            $value = (string) $value;
+
+            if ('textarea' === $rules['type']) {
+                $value = sanitize_textarea_field($value);
+            } else {
+                $value = sanitize_text_field($value);
+            }
+
+            $sanitized[$key] = $this->limit_string_length(
+                $value,
+                (int) $rules['max']
+            );
+        }
+
+        return $sanitized;
+    }
+
+
+
+    /**
+ * Limit a string to a maximum number of characters.
+ */
+private function limit_string_length( string $value, int $max_length ): string {
+    if ( $max_length < 1 ) {
+        return '';
+    }
+
+    if ( function_exists( 'mb_strlen' ) && function_exists( 'mb_substr' ) ) {
+        if ( mb_strlen( $value, 'UTF-8' ) <= $max_length ) {
+            return $value;
+        }
+
+        return mb_substr(
+            $value,
+            0,
+            $max_length,
+            'UTF-8'
+        );
+    }
+
+    if ( strlen( $value ) <= $max_length ) {
+        return $value;
+    }
+
+    return substr( $value, 0, $max_length );
+}
+
+
 
     /**
      * Retrieve saved Brand Profile values.
