@@ -19,14 +19,14 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
 
     public function generate(
         GenerationRequest $request
-    ): GenerationResult {
+    ): AIClientResult {
 
         /*
          * Keep every direct dependency on WordPress AI
          * inside this gateway.
          */
         if (! function_exists('wp_ai_client_prompt')) {
-            return GenerationResult::failure(
+            return AIClientResult::failure(
                 AIErrorCode::NO_AI_PROVIDER->value,
                 'The WordPress AI Client is unavailable.'
             );
@@ -64,7 +64,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
              * depend on those requirements.
              */
             if (! $builder->is_supported_for_text_generation()) {
-                return GenerationResult::failure(
+                return AIClientResult::failure(
                     AIErrorCode::NO_AI_PROVIDER->value,
                     'No configured AI provider supports this text generation request.'
                 );
@@ -82,7 +82,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                     $result
                 );
 
-                return GenerationResult::failure(
+                return AIClientResult::failure(
                     $normalized['code'],
                     $normalized['message']
                 );
@@ -103,7 +103,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                 $modelId = $modelMetadata->getId();
             }
 
-            return GenerationResult::success(
+            return AIClientResult::success(
                 $result->toText(),
                 $providerId,
                 $modelId
@@ -111,7 +111,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
 
         } catch (\Throwable $throwable) {
 
-            return GenerationResult::failure(
+            return AIClientResult::failure(
                 AIErrorCode::UNKNOWN_ERROR->value,
                 'An unexpected AI error occurred.'
             );

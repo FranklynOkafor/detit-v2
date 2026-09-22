@@ -10,5 +10,5 @@ interface AIClientGatewayInterface
 {
     public function generate(
         GenerationRequest $request
-    ): GenerationResult;
+    ): AIClientResult;
 }
