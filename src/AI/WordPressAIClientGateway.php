@@ -36,6 +36,9 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
             $builder = wp_ai_client_prompt(
                 $request->prompt()
             );
+            $builder = $builder->using_model_preference(
+                'gemini-3.5-flash'
+            );
 
             /*
              * Apply optional request configuration.
@@ -108,7 +111,6 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                 $providerId,
                 $modelId
             );
-
         } catch (\Throwable $throwable) {
 
             return AIClientResult::failure(

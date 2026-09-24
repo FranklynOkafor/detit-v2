@@ -8,11 +8,12 @@ use DetIt\Domain\ProductFactSheet;
 use InvalidArgumentException;
 use RuntimeException;
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
 	exit;
 }
 
-final class PromptBuilder {
+final class PromptBuilder
+{
 
 	/**
 	 * Build a generation request.
@@ -41,7 +42,7 @@ final class PromptBuilder {
 			$selectedFields
 		);
 
-		if ( empty( $selectedFields ) ) {
+		if (empty($selectedFields)) {
 			throw new InvalidArgumentException(
 				'At least one generation field must be selected.'
 			);
@@ -49,9 +50,9 @@ final class PromptBuilder {
 
 		$layers = [
 			$this->buildSystemLayer(),
-			$this->buildBrandLayer( $brandProfile ),
-			$this->buildTemplateLayer( $template ),
-			$this->buildProductFactsLayer( $productFactSheet ),
+			$this->buildBrandLayer($brandProfile),
+			$this->buildTemplateLayer($template),
+			$this->buildProductFactsLayer($productFactSheet),
 			$this->buildUserInstructionsLayer(
 				$selectedFields,
 				$language,
@@ -67,23 +68,24 @@ final class PromptBuilder {
 			"\n\n",
 			array_filter(
 				$layers,
-				static fn( string $layer ): bool => '' !== trim( $layer )
+				static fn(string $layer): bool => '' !== trim($layer)
 			)
 		);
 
-		if ( '' === trim( $prompt ) ) {
+		if ('' === trim($prompt)) {
 			throw new RuntimeException(
 				'PromptBuilder produced an empty prompt.'
 			);
 		}
 
-		return new GenerationRequest( $prompt );
+		return new GenerationRequest($prompt);
 	}
 
 	/**
 	 * Build the system layer.
 	 */
-	private function buildSystemLayer(): string {
+	private function buildSystemLayer(): string
+	{
 
 		return <<<PROMPT
 === SYSTEM ===
@@ -148,26 +150,26 @@ PROMPT;
 
 		$instructions[] =
 			'Requested fields: ' .
-			implode( ', ', $selectedFields );
+			implode(', ', $selectedFields);
 
-		$language = trim( $language );
+		$language = trim($language);
 
-		if ( '' !== $language ) {
+		if ('' !== $language) {
 			$instructions[] =
 				'Language: ' . $language;
 		}
 
-		$toneOverride = trim( $toneOverride );
+		$toneOverride = trim($toneOverride);
 
-		if ( '' !== $toneOverride ) {
+		if ('' !== $toneOverride) {
 			$instructions[] =
 				'Tone override: ' . $toneOverride;
 		}
 
 		$additionalInstructions =
-			trim( $additionalInstructions );
+			trim($additionalInstructions);
 
-		if ( '' !== $additionalInstructions ) {
+		if ('' !== $additionalInstructions) {
 			$instructions[] =
 				'Additional instructions: ' .
 				$additionalInstructions;
@@ -175,15 +177,17 @@ PROMPT;
 
 		return sprintf(
 			"=== USER INSTRUCTIONS ===\n%s",
-			implode( "\n", $instructions )
+			implode("\n", $instructions)
 		);
 	}
 
+
 	/**
-	 * Build temporary output requirements.
+	 * Build the structured output requirements.
 	 *
-	 * Stage 35 will replace this with the permanent
-	 * structured output schema.
+	 * The AI provider is asked for plain text generation,
+	 * but the text itself must contain exactly one JSON
+	 * object matching DetIt's output schema.
 	 *
 	 * @param array<int,string> $selectedFields
 	 */
@@ -191,11 +195,46 @@ PROMPT;
 		array $selectedFields
 	): string {
 
-		return sprintf(
-			"=== OUTPUT REQUIREMENTS ===\nGenerate only the requested fields: %s.",
-			implode( ', ', $selectedFields )
+		$schema = OutputSchema::definition(
+			$selectedFields
 		);
+
+		$schemaJson = wp_json_encode(
+			$schema,
+			JSON_PRETTY_PRINT |
+				JSON_UNESCAPED_SLASHES |
+				JSON_UNESCAPED_UNICODE
+		);
+
+		if (! is_string($schemaJson)) {
+			throw new RuntimeException(
+				'Unable to encode the DetIt output schema.'
+			);
+		}
+
+		$fieldList = implode(
+			', ',
+			$selectedFields
+		);
+
+		return <<<PROMPT
+=== OUTPUT REQUIREMENTS ===
+Return exactly ONE valid JSON object and nothing else.
+
+Use exactly these top-level fields:
+{$fieldList}
+
+Do not use Markdown code fences.
+Do not add headings, explanations, commentary or text before or after the JSON.
+Do not add any top-level fields that were not requested.
+
+The JSON object must match this schema:
+
+{$schemaJson}
+PROMPT;
 	}
+
+
 
 	/**
 	 * Convert structured data into a labelled JSON layer.
@@ -211,11 +250,11 @@ PROMPT;
 		$json = wp_json_encode(
 			$data,
 			JSON_PRETTY_PRINT |
-			JSON_UNESCAPED_SLASHES |
-			JSON_UNESCAPED_UNICODE
+				JSON_UNESCAPED_SLASHES |
+				JSON_UNESCAPED_UNICODE
 		);
 
-		if ( ! is_string( $json ) ) {
+		if (! is_string($json)) {
 			throw new RuntimeException(
 				sprintf(
 					'Unable to encode the %s prompt layer.',
@@ -244,15 +283,15 @@ PROMPT;
 
 		$normalized = [];
 
-		foreach ( $fields as $field ) {
+		foreach ($fields as $field) {
 
-			if ( ! is_string( $field ) ) {
+			if (! is_string($field)) {
 				continue;
 			}
 
-			$field = trim( $field );
+			$field = trim($field);
 
-			if ( '' === $field ) {
+			if ('' === $field) {
 				continue;
 			}
 
@@ -260,7 +299,7 @@ PROMPT;
 		}
 
 		return array_values(
-			array_unique( $normalized )
+			array_unique($normalized)
 		);
 	}
 }

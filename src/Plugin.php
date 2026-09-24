@@ -5,6 +5,7 @@ namespace DetIt;
 use DetIt\Admin\Menu;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
+use DetIt\REST\GenerateController;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -48,6 +49,7 @@ class Plugin
 	private function bootRest(): void
 	{
 		// Stage 38.
+		(new GenerateController())->registerHooks();
 	}
 
 	private function bootDatabase(): void
