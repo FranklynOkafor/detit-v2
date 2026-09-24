@@ -42,17 +42,64 @@ final class GenerateController
     }
 
     /**
-     * Stage 38 permission boundary.
-     *
-     * Stage 39 will replace this with:
-     * - DetIt capability check
-     * - product validation
-     * - edit permission for the specific product
+     * Stage 39 generation endpoint permission boundary.
      */
-    public function permissionsCheck(
-        \WP_REST_Request $request
-    ): bool {
-        return is_user_logged_in();
+    public function permissionsCheck(\WP_REST_Request $request): bool|\WP_Error
+    {
+        if (! is_user_logged_in()) {
+            return new \WP_Error(
+                'PERMISSION_DENIED',
+                __(
+                    'You must be logged in to generate product content.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 401]
+            );
+        }
+
+        if (! current_user_can('manage_woocommerce')) {
+            return new \WP_Error(
+                'PERMISSION_DENIED',
+                __(
+                    'You are not allowed to generate product content.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 403]
+            );
+        }
+
+        $productId = absint(
+            $request->get_param('product_id')
+        );
+
+        $post = get_post($productId);
+
+        if (
+            ! $post instanceof \WP_Post
+            || 'product' !== $post->post_type
+        ) {
+            return new \WP_Error(
+                'PRODUCT_NOT_FOUND',
+                __(
+                    'The requested product could not be found.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 404]
+            );
+        }
+
+        if (! current_user_can('edit_post', $productId)) {
+            return new \WP_Error(
+                'PERMISSION_DENIED',
+                __(
+                    'You are not allowed to edit this product.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 403]
+            );
+        }
+
+        return true;
     }
 
     public function generate(
@@ -69,9 +116,7 @@ final class GenerateController
                 'product_id'
             );
 
-            $requestedFields = $request->get_param(
-                'selected_fields'
-            );
+
 
             $templateSlug = (string) $request->get_param(
                 'template'
@@ -98,14 +143,10 @@ final class GenerateController
              * ---------------------------------------------------------
              */
 
-            $requestedFields = is_array($requestedFields)
-                ? array_map('strval', $requestedFields)
-                : [];
 
             $selectedFields = array_values(
-                array_intersect(
-                    OutputSchema::fields(),
-                    $requestedFields
+                array_unique(
+                    $request->get_param('selected_fields')
                 )
             );
 
@@ -300,7 +341,7 @@ final class GenerateController
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(
                     '[DetIt Stage 38] '
-                    . $exception->getMessage()
+                        . $exception->getMessage()
                 );
             }
 
@@ -321,44 +362,124 @@ final class GenerateController
     {
         return [
             'product_id' => [
-                'required' => true,
-                'type' => 'integer',
+                'required'          => true,
+                'type'              => 'integer',
+                'minimum'           => 1,
                 'sanitize_callback' => 'absint',
             ],
 
             'selected_fields' => [
-                'required' => true,
-                'type' => 'array',
-                'items' => [
+                'required'          => true,
+                'type'              => 'array',
+                'items'             => [
                     'type' => 'string',
+                ],
+                'validate_callback' => [
+                    $this,
+                    'validateSelectedFields',
                 ],
             ],
 
             'template' => [
-                'required' => true,
-                'type' => 'string',
+                'required'          => true,
+                'type'              => 'string',
                 'sanitize_callback' => 'sanitize_key',
+                'validate_callback' => [
+                    $this,
+                    'validateTemplate',
+                ],
             ],
 
             'language' => [
-                'required' => true,
-                'type' => 'string',
+                'required'          => true,
+                'type'              => 'string',
                 'sanitize_callback' => 'sanitize_text_field',
+                'validate_callback' => static function ($value): bool {
+                    return trim((string) $value) !== '';
+                },
             ],
 
             'tone' => [
-                'required' => false,
-                'type' => 'string',
+                'required'          => false,
+                'type'              => 'string',
+                'default'           => '',
                 'sanitize_callback' => 'sanitize_text_field',
-                'default' => '',
             ],
 
             'additional_instructions' => [
-                'required' => false,
-                'type' => 'string',
+                'required'          => false,
+                'type'              => 'string',
+                'default'           => '',
                 'sanitize_callback' => 'sanitize_textarea_field',
-                'default' => '',
             ],
         ];
+    }
+
+    public function validateSelectedFields(
+        mixed $value,
+        \WP_REST_Request $request,
+        string $param
+    ): bool|\WP_Error {
+
+        if (! is_array($value) || $value === []) {
+            return new \WP_Error(
+                'rest_invalid_param',
+                __(
+                    'At least one generation field must be selected.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 400]
+            );
+        }
+
+        $allowedFields = OutputSchema::fields();
+
+        foreach ($value as $field) {
+            if (
+                ! is_string($field)
+                || $field === ''
+                || ! in_array($field, $allowedFields, true)
+            ) {
+                return new \WP_Error(
+                    'rest_invalid_param',
+                    __(
+                        'One or more selected generation fields are invalid.',
+                        'detit-product-content-generator-for-woocommerce'
+                    ),
+                    ['status' => 400]
+                );
+            }
+        }
+
+        return true;
+    }
+
+
+    public function validateTemplate(
+        mixed $value,
+        \WP_REST_Request $request,
+        string $param
+    ): bool|\WP_Error {
+
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $slug = sanitize_key($value);
+
+        $registry = new TemplateRegistry();
+
+        if ($registry->get($slug) === null) {
+            return new \WP_Error(
+                'rest_invalid_param',
+                __(
+                    'The selected generation template is invalid.',
+                    'detit-product-content-generator-for-woocommerce'
+                ),
+                ['status' => 400]
+            );
+        }
+
+        return true;
     }
 }
