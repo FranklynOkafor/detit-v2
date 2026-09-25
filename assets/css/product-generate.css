@@ -3,42 +3,63 @@
     text-align: center;
 }
 
-.detit-modal[hidden] {
-    display: none;
-}
-
 .detit-modal {
     position: fixed;
     inset: 0;
     z-index: 100000;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.detit-modal[hidden] {
+    display: none;
 }
 
 .detit-modal__backdrop {
     position: absolute;
     inset: 0;
+
     background: rgba(0, 0, 0, 0.55);
 }
 
 .detit-modal__dialog {
     position: relative;
     z-index: 1;
+
+    display: flex;
+    flex-direction: column;
+
     width: 100%;
     max-width: 620px;
+
+    max-height: calc(100vh - 32px);
+
+    overflow: hidden;
+
     background: #ffffff;
     border-radius: 6px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .detit-modal__header {
+    flex: 0 0 auto;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 20px;
+
+    padding: 14px 18px;
+
     border-bottom: 1px solid #dcdcde;
+
+    background: #ffffff;
 }
 
 .detit-modal__header h2 {
@@ -46,18 +67,143 @@
 }
 
 .detit-modal__body {
-    padding: 20px;
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    overflow-y: auto;
+
+    padding: 16px 20px;
+}
+
+.detit-modal__footer {
+    flex: 0 0 auto;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    padding: 12px 20px;
+
+    border-top: 1px solid #dcdcde;
+
+    background: #ffffff;
 }
 
 .detit-modal__close {
     border: 0;
     background: transparent;
     cursor: pointer;
+
     font-size: 28px;
     line-height: 1;
+
     padding: 0 4px;
 }
 
 body.detit-modal-open {
     overflow: hidden;
+}
+
+/* Additional code for stage 42 */
+
+
+.detit-modal__dialog {
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+}
+
+.detit-modal__body {
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+}
+
+.detit-field-group {
+    margin: 0 0 20px;
+    padding: 0;
+    border: 0;
+}
+
+.detit-field-group legend {
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.detit-field-group label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.detit-form-field {
+    margin-bottom: 18px;
+}
+
+.detit-form-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.detit-form-field input[type="text"],
+.detit-form-field select,
+.detit-form-field textarea {
+    width: 100%;
+}
+
+.detit-modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+.detit-message {
+    margin-top: 15px;
+    padding: 10px 12px;
+    border-left: 4px solid;
+    background: #f6f7f7;
+}
+
+.detit-message--error {
+    border-left-color: #d63638;
+}
+
+.detit-message--success {
+    border-left-color: #00a32a;
+}
+
+#detit-generation-controls {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+
+.detit-generation-feedback {
+    flex: 0 0 auto;
+    background: #ffffff;
+}
+
+.detit-message {
+    margin: 12px 20px 0;
+    padding: 10px 12px;
+
+    border-left: 4px solid;
+
+    background: #f6f7f7;
+
+    font-weight: 500;
+}
+
+.detit-message--error {
+    border-left-color: #d63638;
+    background: #fcf0f1;
+}
+
+.detit-message--success {
+    border-left-color: #00a32a;
+    background: #edfaef;
 }
