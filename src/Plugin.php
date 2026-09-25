@@ -5,6 +5,7 @@ namespace DetIt;
 use DetIt\Admin\Menu;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
+use DetIt\Admin\ProductGenerateMetaBox;
 use DetIt\REST\GenerateController;
 
 if (! defined('ABSPATH')) {
@@ -60,7 +61,10 @@ class Plugin
 
 	private function bootWooCommerce(): void
 	{
-		// Future WooCommerce integrations.
+		// Stage 41.
+		if (is_admin()) {
+			(new ProductGenerateMetaBox())->registerHooks();
+		}
 	}
 
 	private function bootAbilities(): void

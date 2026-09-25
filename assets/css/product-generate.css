@@ -1,0 +1,63 @@
+.detit-generate-panel .button {
+    width: 100%;
+    text-align: center;
+}
+
+.detit-modal[hidden] {
+    display: none;
+}
+
+.detit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.detit-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.detit-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 620px;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.detit-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.detit-modal__header h2 {
+    margin: 0;
+}
+
+.detit-modal__body {
+    padding: 20px;
+}
+
+.detit-modal__close {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+body.detit-modal-open {
+    overflow: hidden;
+}
