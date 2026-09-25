@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace DetIt\REST;
 
-use DetIt\AI\GenerationResponseHandler;
-use DetIt\AI\GenerationResponseParser;
+use DetIt\Application\GenerateProduct;
 use DetIt\AI\OutputSchema;
-use DetIt\AI\PromptBuilder;
 use DetIt\AI\Templates\TemplateRegistry;
-use DetIt\AI\WordPressAIClientGateway;
-use DetIt\Domain\BrandProfile;
-use DetIt\WooCommerce\ProductFactSheetFactory;
-use DetIt\WooCommerce\ProductReader;
+
+
+// use DetIt\AI\GenerationResponseHandler;
+// use DetIt\AI\GenerationResponseParser;
+
+// use DetIt\AI\PromptBuilder;
+// use DetIt\AI\WordPressAIClientGateway;
+// use DetIt\Domain\BrandProfile;
+// use DetIt\WooCommerce\ProductFactSheetFactory;
+// use DetIt\WooCommerce\ProductReader;
 
 final class GenerateController
 {
@@ -106,17 +110,15 @@ final class GenerateController
         \WP_REST_Request $request
     ): \WP_REST_Response|\WP_Error {
         try {
-            /*
-             * ---------------------------------------------------------
-             * 1. Read request inputs.
-             * ---------------------------------------------------------
-             */
-
             $productId = (int) $request->get_param(
                 'product_id'
             );
 
-
+            $selectedFields = array_values(
+                array_unique(
+                    $request->get_param('selected_fields')
+                )
+            );
 
             $templateSlug = (string) $request->get_param(
                 'template'
@@ -135,156 +137,24 @@ final class GenerateController
             );
 
             /*
-             * ---------------------------------------------------------
-             * 2. Keep only fields supported by DetIt's first schema.
-             *
-             * Strict validation/error reporting belongs to Stage 39.
-             * For Stage 38 we simply normalize to known fields.
-             * ---------------------------------------------------------
-             */
+         * Stage 40 application service owns the complete
+         * product-generation workflow.
+         */
+            $generateProduct = new GenerateProduct();
 
-
-            $selectedFields = array_values(
-                array_unique(
-                    $request->get_param('selected_fields')
-                )
-            );
-
-            if ($selectedFields === []) {
-                return new \WP_Error(
-                    'detit_no_generation_fields',
-                    __(
-                        'Select at least one supported field to generate.',
-                        'detit-product-content-generator-for-woocommerce'
-                    ),
-                    [
-                        'status' => 400,
-                    ]
-                );
-            }
-
-            /*
-             * ---------------------------------------------------------
-             * 3. Read WooCommerce product.
-             * ---------------------------------------------------------
-             */
-
-            $reader = new ProductReader();
-
-            $productContext = $reader->read(
-                $productId
-            );
-
-            if ($productContext === null) {
-                return new \WP_Error(
-                    'detit_product_not_found',
-                    __(
-                        'The requested product could not be found.',
-                        'detit-product-content-generator-for-woocommerce'
-                    ),
-                    [
-                        'status' => 404,
-                    ]
-                );
-            }
-
-            /*
-             * ---------------------------------------------------------
-             * 4. Convert ProductContext into trusted AI facts.
-             * ---------------------------------------------------------
-             */
-
-            $factSheetFactory = new ProductFactSheetFactory();
-
-            $factSheet = $factSheetFactory->create(
-                $productContext
-            );
-
-            /*
-             * ---------------------------------------------------------
-             * 5. Load the saved Brand Profile.
-             * ---------------------------------------------------------
-             */
-
-            $brandData = get_option(
-                'detit_brand_profile',
-                []
-            );
-
-            if (!is_array($brandData)) {
-                $brandData = [];
-            }
-
-            $brandProfile = new BrandProfile(
-                $brandData
-            );
-
-            /*
-             * ---------------------------------------------------------
-             * 6. Resolve the requested template.
-             * ---------------------------------------------------------
-             */
-
-            $templateRegistry = new TemplateRegistry();
-
-            $template = $templateRegistry->get(
-                $templateSlug
-            );
-
-            if ($template === null) {
-                return new \WP_Error(
-                    'detit_invalid_template',
-                    __(
-                        'The requested DetIt template does not exist.',
-                        'detit-product-content-generator-for-woocommerce'
-                    ),
-                    [
-                        'status' => 400,
-                    ]
-                );
-            }
-
-            /*
-             * ---------------------------------------------------------
-             * 7. Build the generation request.
-             * ---------------------------------------------------------
-             */
-
-            $promptBuilder = new PromptBuilder();
-
-            $generationRequest = $promptBuilder->build(
-                $brandProfile,
-                $factSheet,
-                $template,
+            $outcome = $generateProduct->execute(
+                $productId,
                 $selectedFields,
+                $templateSlug,
                 $language,
                 $tone,
                 $additionalInstructions
             );
 
             /*
-             * ---------------------------------------------------------
-             * 8. Run through the real AI gateway AND Stage 37's
-             *    structured-output protection.
-             * ---------------------------------------------------------
-             */
-
-            $responseHandler = new GenerationResponseHandler(
-                new WordPressAIClientGateway(),
-                new GenerationResponseParser()
-            );
-
-            $outcome = $responseHandler->handle(
-                $generationRequest,
-                $selectedFields
-            );
-
-            /*
-             * ---------------------------------------------------------
-             * 9. Translate DetIt AI failure into a REST error.
-             * ---------------------------------------------------------
-             */
-
+         * The REST layer only translates application
+         * outcomes into HTTP responses.
+         */
             if ($outcome->isFailure()) {
                 return new \WP_Error(
                     $outcome->errorCode()
@@ -299,12 +169,6 @@ final class GenerateController
                     ]
                 );
             }
-
-            /*
-             * ---------------------------------------------------------
-             * 10. Return trusted GenerationResult content only.
-             * ---------------------------------------------------------
-             */
 
             $result = $outcome->result();
 
@@ -334,13 +198,9 @@ final class GenerateController
                 ]
             );
         } catch (\Throwable $exception) {
-            /*
-             * Do not leak PHP exception details to REST clients.
-             * Log them for development instead.
-             */
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(
-                    '[DetIt Stage 38] '
+                    '[DetIt GenerateController] '
                         . $exception->getMessage()
                 );
             }
