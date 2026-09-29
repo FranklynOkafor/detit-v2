@@ -60,6 +60,46 @@ final class ProductGenerateMetaBox
             return;
         }
 
+        $productId = isset($_GET['post'])
+            ? absint(wp_unslash($_GET['post']))
+            : 0;
+
+        if ($productId <= 0 || ! function_exists('wc_get_product')) {
+            return;
+        }
+
+        $product = wc_get_product($productId);
+
+        if (! $product) {
+            return;
+        }
+
+        $tagNames = wp_get_post_terms(
+            $productId,
+            'product_tag',
+            [
+                'fields' => 'names',
+            ]
+        );
+
+        if (is_wp_error($tagNames)) {
+            $tagNames = [];
+        }
+
+        $existingContent = [
+            'title' => $product->get_name('edit'),
+
+            'short_description' =>
+                $product->get_short_description('edit'),
+
+            'description' =>
+                $product->get_description('edit'),
+
+            'meta_description' => '',
+
+            'tags' => $tagNames,
+        ];
+
         $cssFile = DETIT_PATH . 'assets/css/product-generate.css';
         $jsFile  = DETIT_PATH . 'assets/js/product-generate.js';
 
@@ -73,14 +113,30 @@ final class ProductGenerateMetaBox
         }
 
         if (file_exists($jsFile)) {
-            wp_enqueue_script(
-                'detit-product-generate',
-                DETIT_URL . 'assets/js/product-generate.js',
-                [],
-                (string) filemtime($jsFile),
-                true
-            );
-        }
+    wp_enqueue_script(
+        'detit-product-generate',
+        DETIT_URL . 'assets/js/product-generate.js',
+        [],
+        (string) filemtime($jsFile),
+        true
+    );
+
+    wp_localize_script(
+        'detit-product-generate',
+        'detitProductGenerate',
+        [
+            'productId' => $productId,
+
+            'restUrl' => esc_url_raw(
+                rest_url('detit/v2/generate')
+            ),
+
+            'nonce' => wp_create_nonce('wp_rest'),
+
+            'existing' => $existingContent,
+        ]
+    );
+}
     }
 
     public function render(WP_Post $post): void
@@ -387,6 +443,94 @@ final class ProductGenerateMetaBox
                                 'detit-product-content-generator-for-woocommerce'
                             );
                             ?>
+                        </button>
+
+                    </div>
+                    
+                </div> <!-- detit-generation-controls -->
+                    
+
+                <div
+                    id="detit-generation-preview"
+                    class="detit-generation-preview"
+                    hidden>
+
+                    <div class="detit-generation-feedback">
+
+                        <div
+                            id="detit-preview-error"
+                            class="detit-message detit-message--error"
+                            role="alert"
+                            aria-live="assertive"
+                            hidden></div>
+
+                        <div
+                            id="detit-preview-status"
+                            class="detit-message detit-message--success"
+                            role="status"
+                            aria-live="polite"
+                            hidden></div>
+
+                    </div>
+
+                    <div class="detit-modal__body">
+
+                        <div class="detit-preview-heading">
+
+                            <h3>
+                                <?php
+                                esc_html_e(
+                                    'Preview generated content',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </h3>
+
+                            <p>
+                                <?php
+                                esc_html_e(
+                                    'Compare the existing product content with the generated version. Nothing has been saved yet.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </p>
+
+                        </div>
+
+                        <div
+                            id="detit-preview-fields"
+                            class="detit-preview-fields"></div>
+
+                    </div>
+
+                    <div class="detit-modal__footer">
+
+                        <button
+                            type="button"
+                            class="button"
+                            id="detit-back-to-controls">
+
+                            <?php
+                            esc_html_e(
+                                'Back',
+                                'detit-product-content-generator-for-woocommerce'
+                            );
+                            ?>
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="button"
+                            data-detit-close="true">
+
+                            <?php
+                            esc_html_e(
+                                'Cancel',
+                                'detit-product-content-generator-for-woocommerce'
+                            );
+                            ?>
+
                         </button>
 
                     </div>

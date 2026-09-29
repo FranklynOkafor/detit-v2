@@ -207,3 +207,130 @@ body.detit-modal-open {
     border-left-color: #00a32a;
     background: #edfaef;
 }
+
+/*
+ * ---------------------------------------------------------
+ * Stage 43: Generation preview.
+ * ---------------------------------------------------------
+ */
+
+.detit-generation-preview {
+    display: flex;
+    flex-direction: column;
+
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+
+    overflow: hidden;
+}
+
+.detit-generation-preview[hidden] {
+    display: none;
+}
+
+.detit-preview-heading {
+    margin-bottom: 20px;
+}
+
+.detit-preview-heading h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+}
+
+.detit-preview-heading p {
+    margin: 0;
+    color: #646970;
+    line-height: 1.5;
+}
+
+.detit-preview-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.detit-preview-field {
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.detit-preview-field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #dcdcde;
+    background: #f6f7f7;
+}
+
+.detit-preview-field-header strong {
+    font-size: 14px;
+}
+
+.detit-preview-selection {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.detit-preview-selection input {
+    margin: 0;
+}
+
+.detit-preview-comparison {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+}
+
+.detit-preview-column {
+    min-width: 0;
+    padding: 14px;
+}
+
+.detit-preview-column + .detit-preview-column {
+    border-left: 1px solid #dcdcde;
+}
+
+.detit-preview-column-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #50575e;
+}
+
+.detit-preview-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+/*
+ * Smaller screens and narrow laptop layouts.
+ */
+@media screen and (max-width: 782px) {
+    .detit-preview-comparison {
+        grid-template-columns: 1fr;
+    }
+
+    .detit-preview-column + .detit-preview-column {
+        border-left: 0;
+        border-top: 1px solid #dcdcde;
+    }
+
+    .detit-preview-field-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .detit-preview-selection {
+        white-space: normal;
+    }
+}

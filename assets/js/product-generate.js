@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
+    /*
+     * ---------------------------------------------------------
+     * Stage 41: Base modal elements.
+     * ---------------------------------------------------------
+     */
+
     const openButton = document.getElementById(
         'detit-open-generator'
     );
@@ -8,11 +14,22 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
     /*
-     * Stage 41 foundation.
+     * Stage 41 must continue to work even if later-stage
+     * controls are unavailable.
      */
     if (! openButton || ! modal) {
         return;
     }
+
+    const closeButtons = modal.querySelectorAll(
+        '[data-detit-close="true"]'
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * Stage 42: Generation form elements.
+     * ---------------------------------------------------------
+     */
 
     const controls = document.getElementById(
         'detit-generation-controls'
@@ -30,13 +47,62 @@ document.addEventListener('DOMContentLoaded', function () {
         'detit-generation-status'
     );
 
-    const modalBody = modal.querySelector(
-        '.detit-modal__body'
+    /*
+     * ---------------------------------------------------------
+     * Stage 43: Preview elements.
+     * ---------------------------------------------------------
+     */
+
+    const preview = document.getElementById(
+        'detit-generation-preview'
     );
 
-    const closeButtons = modal.querySelectorAll(
-        '[data-detit-close="true"]'
+    const previewFields = document.getElementById(
+        'detit-preview-fields'
     );
+
+    const backButton = document.getElementById(
+        'detit-back-to-controls'
+    );
+
+    const previewError = document.getElementById(
+        'detit-preview-error'
+    );
+
+    const previewStatus = document.getElementById(
+        'detit-preview-status'
+    );
+
+    /*
+     * There are now two .detit-modal__body elements:
+     * one for generation controls and one for preview.
+     *
+     * We only need the first one here so that opening
+     * the modal starts at the top.
+     */
+    const controlsBody = controls
+        ? controls.querySelector('.detit-modal__body')
+        : null;
+
+    /*
+     * ---------------------------------------------------------
+     * Human-readable field labels.
+     * ---------------------------------------------------------
+     */
+
+    const fieldLabels = {
+        title: 'Product title',
+        short_description: 'Short description',
+        description: 'Description',
+        meta_description: 'Meta description',
+        tags: 'Tags',
+    };
+
+    /*
+     * ---------------------------------------------------------
+     * Message helpers.
+     * ---------------------------------------------------------
+     */
 
     function clearMessages() {
         if (errorMessage) {
@@ -50,8 +116,95 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function clearPreviewMessages() {
+        if (previewError) {
+            previewError.textContent = '';
+            previewError.setAttribute('hidden', '');
+        }
+
+        if (previewStatus) {
+            previewStatus.textContent = '';
+            previewStatus.setAttribute('hidden', '');
+        }
+    }
+
+    function showError(message) {
+        if (! errorMessage) {
+            return;
+        }
+
+        errorMessage.textContent = message;
+        errorMessage.removeAttribute('hidden');
+    }
+
+    function showStatus(message) {
+        if (! statusMessage) {
+            return;
+        }
+
+        statusMessage.textContent = message;
+        statusMessage.removeAttribute('hidden');
+    }
+
+    function showPreviewStatus(message) {
+        if (! previewStatus) {
+            return;
+        }
+
+        previewStatus.textContent = message;
+        previewStatus.removeAttribute('hidden');
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Screen switching.
+     * ---------------------------------------------------------
+     */
+
+    function showPreviewScreen() {
+        if (! controls || ! preview) {
+            return;
+        }
+
+        controls.hidden = true;
+        preview.hidden = false;
+    }
+
+    function showControlsScreen() {
+        if (! controls || ! preview) {
+            return;
+        }
+
+        preview.hidden = true;
+        controls.hidden = false;
+    }
+
+    /*
+     * Reset preview state without resetting the merchant's
+     * generation choices.
+     *
+     * This means field selections, language, tone, etc.
+     * stay intact while stale generated content disappears.
+     */
+    function resetPreview() {
+        showControlsScreen();
+
+        if (previewFields) {
+            previewFields.replaceChildren();
+        }
+
+        clearPreviewMessages();
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Stage 41 modal behaviour.
+     * ---------------------------------------------------------
+     */
+
     function openModal() {
         clearMessages();
+        resetPreview();
 
         modal.removeAttribute('hidden');
 
@@ -60,10 +213,10 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         /*
-         * Always start the modal at the top.
+         * Always begin at the top of the generation form.
          */
-        if (modalBody) {
-            modalBody.scrollTop = 0;
+        if (controlsBody) {
+            controlsBody.scrollTop = 0;
         }
 
         const closeButton = modal.querySelector(
@@ -82,13 +235,12 @@ document.addEventListener('DOMContentLoaded', function () {
             'detit-modal-open'
         );
 
+        clearMessages();
+        resetPreview();
+
         openButton.focus();
     }
 
-    /*
-     * Stage 41 behaviour must work regardless
-     * of Stage 42 controls.
-     */
     openButton.addEventListener(
         'click',
         openModal
@@ -105,8 +257,8 @@ document.addEventListener('DOMContentLoaded', function () {
         'keydown',
         function (event) {
             if (
-                event.key === 'Escape' &&
-                ! modal.hasAttribute('hidden')
+                event.key === 'Escape'
+                && ! modal.hasAttribute('hidden')
             ) {
                 closeModal();
             }
@@ -114,8 +266,12 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
     /*
-     * Stage 42 controls.
+     * ---------------------------------------------------------
+     * Stage 42 controls must exist before generation logic
+     * can continue.
+     * ---------------------------------------------------------
      */
+
     if (! controls || ! generateButton) {
         console.warn(
             'DetIt: Stage 42 generation controls were not found.'
@@ -123,6 +279,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return;
     }
+
+    /*
+     * ---------------------------------------------------------
+     * Stage 43 preview elements must also exist.
+     * ---------------------------------------------------------
+     */
+
+    if (
+        ! preview
+        || ! previewFields
+        || ! backButton
+        || ! previewError
+        || ! previewStatus
+    ) {
+        console.warn(
+            'DetIt: Stage 43 preview elements were not found.'
+        );
+
+        return;
+    }
+
+    /*
+     * Confirm that the PHP -> JavaScript bridge created
+     * during Stage 43 exists.
+     */
+    if (
+        typeof detitProductGenerate === 'undefined'
+        || ! detitProductGenerate.restUrl
+        || ! detitProductGenerate.nonce
+    ) {
+        console.warn(
+            'DetIt: Generation configuration is unavailable.'
+        );
+
+        return;
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Back button.
+     * ---------------------------------------------------------
+     */
+
+    backButton.addEventListener(
+        'click',
+        function () {
+            clearMessages();
+            showControlsScreen();
+
+            /*
+             * Keep the generated preview in memory for now.
+             * It will be replaced when another generation runs
+             * or cleared when the modal closes.
+             */
+        }
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * Stage 42: Read generation selections.
+     * ---------------------------------------------------------
+     */
 
     function getSelectedFields() {
         return Array.from(
@@ -144,6 +362,11 @@ document.addEventListener('DOMContentLoaded', function () {
         return field.value.trim();
     }
 
+    /*
+     * Build the exact request shape expected by:
+     *
+     * POST /detit/v2/generate
+     */
     function buildPayload() {
         return {
             product_id: Number.parseInt(
@@ -166,46 +389,355 @@ document.addEventListener('DOMContentLoaded', function () {
                 getValue('detit-tone'),
 
             additional_instructions:
-                getValue('detit-instructions')
+                getValue('detit-instructions'),
         };
     }
 
-    function showError(message) {
-        if (! errorMessage) {
-            return;
+    /*
+     * ---------------------------------------------------------
+     * Stage 43: Send the generation request.
+     * ---------------------------------------------------------
+     */
+
+    async function requestGeneration(payload) {
+        const response = await fetch(
+            detitProductGenerate.restUrl,
+            {
+                method: 'POST',
+
+                credentials: 'same-origin',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce':
+                        detitProductGenerate.nonce,
+                },
+
+                body: JSON.stringify(payload),
+            }
+        );
+
+        let data;
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            console.error(
+                'DetIt received a non-JSON generation response.',
+                {
+                    status: response.status,
+                    statusText: response.statusText,
+                }
+            );
+
+            if (! response.ok) {
+                throw new Error(
+                    'DetIt generation failed with HTTP '
+                    + response.status
+                    + '.'
+                );
+            }
+
+            throw new Error(
+                'DetIt received an invalid response from the server.'
+            );
         }
 
-        errorMessage.textContent = message;
+        if (! response.ok) {
+            console.error(
+                'DetIt generation request failed:',
+                {
+                    status: response.status,
+                    statusText: response.statusText,
+                    response: data,
+                }
+            );
 
-        errorMessage.removeAttribute(
-            'hidden'
-        );
-    }
-
-    function showStatus(message) {
-        if (! statusMessage) {
-            return;
+            throw new Error(
+                data && data.message
+                    ? data.message
+                    : (
+                        'DetIt could not generate product content. '
+                        + 'HTTP '
+                        + response.status
+                        + '.'
+                    )
+            );
         }
 
-        statusMessage.textContent = message;
-
-        statusMessage.removeAttribute(
-            'hidden'
-        );
+        return data;
     }
+
+    /*
+     * ---------------------------------------------------------
+     * Preview value formatting.
+     * ---------------------------------------------------------
+     */
+
+    function normalizePreviewValue(value) {
+        /*
+         * Tags may arrive as an array.
+         */
+        if (Array.isArray(value)) {
+            return value.join(', ');
+        }
+
+        if (
+            value === null
+            || value === undefined
+        ) {
+            return '';
+        }
+
+        /*
+         * Product descriptions may contain HTML.
+         *
+         * Parse it in an isolated document and extract only
+         * readable text for this first preview implementation.
+         */
+        const parsedDocument =
+            new DOMParser().parseFromString(
+                String(value),
+                'text/html'
+            );
+
+        return parsedDocument.body.textContent
+            || '';
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Build one Existing / Generated column.
+     * ---------------------------------------------------------
+     */
+
+    function createPreviewColumn(
+        labelText,
+        value
+    ) {
+        const column =
+            document.createElement('div');
+
+        column.className =
+            'detit-preview-column';
+
+        const label =
+            document.createElement('span');
+
+        label.className =
+            'detit-preview-column-label';
+
+        label.textContent =
+            labelText;
+
+        const content =
+            document.createElement('div');
+
+        content.className =
+            'detit-preview-content';
+
+        const normalized =
+            normalizePreviewValue(value);
+
+        content.textContent =
+            normalized.trim()
+                ? normalized
+                : 'Not set';
+
+        column.append(
+            label,
+            content
+        );
+
+        return column;
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Build one complete preview field.
+     *
+     * Example:
+     *
+     * Short description    [x] Use this field later
+     *
+     * Existing             Generated
+     * --------             ---------
+     * Old text             New AI text
+     * ---------------------------------------------------------
+     */
+
+    function createPreviewField(
+        field,
+        existingValue,
+        generatedValue
+    ) {
+        const section =
+            document.createElement('section');
+
+        section.className =
+            'detit-preview-field';
+
+        section.dataset.field =
+            field;
+
+        /*
+         * Field heading.
+         */
+        const header =
+            document.createElement('div');
+
+        header.className =
+            'detit-preview-field-header';
+
+        const heading =
+            document.createElement('strong');
+
+        heading.textContent =
+            fieldLabels[field] || field;
+
+        /*
+         * Future apply-selection checkbox.
+         *
+         * Stage 43 does NOT apply anything yet.
+         */
+        const selection =
+            document.createElement('label');
+
+        selection.className =
+            'detit-preview-selection';
+
+        const checkbox =
+            document.createElement('input');
+
+        checkbox.type =
+            'checkbox';
+
+        checkbox.checked =
+            true;
+
+        checkbox.dataset.previewApplyField =
+            field;
+
+        const checkboxText =
+            document.createElement('span');
+
+        checkboxText.textContent =
+            'Use this field later';
+
+        selection.append(
+            checkbox,
+            checkboxText
+        );
+
+        header.append(
+            heading,
+            selection
+        );
+
+        /*
+         * Existing vs Generated comparison.
+         */
+        const comparison =
+            document.createElement('div');
+
+        comparison.className =
+            'detit-preview-comparison';
+
+        comparison.append(
+            createPreviewColumn(
+                'Existing',
+                existingValue
+            ),
+
+            createPreviewColumn(
+                'Generated',
+                generatedValue
+            )
+        );
+
+        section.append(
+            header,
+            comparison
+        );
+
+        return section;
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Render the complete preview.
+     * ---------------------------------------------------------
+     */
+
+    function renderPreview(
+        selectedFields,
+        generated
+    ) {
+        previewFields.replaceChildren();
+
+        const existing =
+            detitProductGenerate.existing || {};
+
+        selectedFields.forEach(
+            function (field) {
+                const previewField =
+                    createPreviewField(
+                        field,
+                        existing[field] ?? '',
+                        generated[field] ?? ''
+                    );
+
+                previewFields.appendChild(
+                    previewField
+                );
+            }
+        );
+
+        showPreviewScreen();
+
+        /*
+         * Start the preview at the top.
+         */
+        const previewBody =
+            preview.querySelector(
+                '.detit-modal__body'
+            );
+
+        if (previewBody) {
+            previewBody.scrollTop = 0;
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * Generate button.
+     * ---------------------------------------------------------
+     */
 
     generateButton.addEventListener(
         'click',
-        function () {
+        async function () {
+            /*
+             * Clear anything left from the previous attempt.
+             */
             clearMessages();
+            clearPreviewMessages();
 
-            const payload = buildPayload();
+            previewFields.replaceChildren();
 
+            const payload =
+                buildPayload();
+
+            /*
+             * -------------------------------------------------
+             * Validate product ID.
+             * -------------------------------------------------
+             */
             if (
                 ! Number.isInteger(
                     payload.product_id
-                ) ||
-                payload.product_id < 1
+                )
+                || payload.product_id < 1
             ) {
                 showError(
                     'The product ID is invalid.'
@@ -215,8 +747,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             /*
-             * This validation deliberately comes
-             * before language validation.
+             * -------------------------------------------------
+             * Validate selected fields.
+             *
+             * Keep this before language validation so the
+             * merchant receives the most useful first error.
+             * -------------------------------------------------
              */
             if (
                 payload.selected_fields.length === 0
@@ -228,6 +764,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
+            /*
+             * -------------------------------------------------
+             * Validate language.
+             * -------------------------------------------------
+             */
             if (payload.language === '') {
                 showError(
                     'Enter the language DetIt should use.'
@@ -237,40 +778,119 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             /*
-             * Stage 42 stops here.
+             * -------------------------------------------------
+             * Preserve Stage 42's diagnostic event.
+             * -------------------------------------------------
              */
             modal.dispatchEvent(
                 new CustomEvent(
                     'detit:generation-request-ready',
                     {
-                        detail: payload
+                        detail: payload,
                     }
                 )
-            );
-
-            showStatus(
-                'Generation request prepared successfully.'
             );
 
             console.log(
                 'DetIt Stage 42 payload:',
                 payload
             );
+
+            /*
+             * -------------------------------------------------
+             * Prevent duplicate generation requests.
+             * -------------------------------------------------
+             */
+            generateButton.disabled = true;
+
+            const originalButtonText =
+                generateButton.textContent;
+
+            generateButton.textContent =
+                'Generating…';
+
+            showStatus(
+                'DetIt is generating your content…'
+            );
+
+            /*
+             * -------------------------------------------------
+             * Call the real generation endpoint.
+             * -------------------------------------------------
+             */
+            try {
+                const generated =
+                    await requestGeneration(
+                        payload
+                    );
+
+                console.log(
+                    'DetIt generation result:',
+                    generated
+                );
+
+                /*
+                 * Remove the loading message before switching
+                 * to Preview.
+                 */
+                clearMessages();
+
+                /*
+                 * Build Stage 43's Existing vs Generated view.
+                 */
+                renderPreview(
+                    payload.selected_fields,
+                    generated
+                );
+
+                showPreviewStatus(
+                    'Generation completed successfully. '
+                    + 'Nothing has been saved.'
+                );
+            } catch (error) {
+                /*
+                 * Stay on the generation screen when the
+                 * provider/server fails.
+                 */
+                clearMessages();
+
+                showControlsScreen();
+
+                showError(
+                    error instanceof Error
+                        ? error.message
+                        : (
+                            'DetIt could not generate '
+                            + 'product content.'
+                        )
+                );
+            } finally {
+                /*
+                 * Always restore the Generate button.
+                 */
+                generateButton.disabled = false;
+
+                generateButton.textContent =
+                    originalButtonText;
+            }
         }
     );
 
     /*
-     * Prevent Enter inside the modal's single-line
-     * controls from submitting WordPress's outer
-     * product-edit form.
+     * ---------------------------------------------------------
+     * Prevent Enter inside single-line controls from
+     * submitting WordPress's outer product-edit form.
+     * ---------------------------------------------------------
      */
+
     controls.addEventListener(
         'keydown',
         function (event) {
             if (
-                event.key === 'Enter' &&
-                event.target instanceof HTMLElement &&
-                event.target.matches(
+                event.key === 'Enter'
+                && event.target
+                    instanceof HTMLElement
+                && event.target.matches(
                     'input, select'
                 )
             ) {
