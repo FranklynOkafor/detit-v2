@@ -65,6 +65,16 @@ document.addEventListener('DOMContentLoaded', function () {
         'detit-back-to-controls'
     );
 
+    /*
+    * ---------------------------------------------------------
+    * Stage 45: Apply generated content.
+    * ---------------------------------------------------------
+    */
+
+    const applyButton = document.getElementById(
+        'detit-apply-generation'
+    );
+
     const previewError = document.getElementById(
         'detit-preview-error'
     );
@@ -146,6 +156,15 @@ document.addEventListener('DOMContentLoaded', function () {
         statusMessage.removeAttribute('hidden');
     }
 
+    function showPreviewError(message) {
+        if (! previewError) {
+            return;
+        }
+
+        previewError.textContent = message;
+        previewError.removeAttribute('hidden');
+    }
+
     function showPreviewStatus(message) {
         if (! previewStatus) {
             return;
@@ -187,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
      * stay intact while stale generated content disappears.
      */
     function resetPreview() {
+        latestGeneratedContent = null;
         showControlsScreen();
 
         if (previewFields) {
@@ -292,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
         || ! backButton
         || ! previewError
         || ! previewStatus
+        || ! applyButton
     ) {
         console.warn(
             'DetIt: Stage 43 preview elements were not found.'
@@ -307,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (
         typeof detitProductGenerate === 'undefined'
         || ! detitProductGenerate.restUrl
+        || ! detitProductGenerate.applyRestUrl
         || ! detitProductGenerate.nonce
     ) {
         console.warn(
@@ -315,6 +337,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return;
     }
+
+
+    /*
+    * The most recent successful generation result.
+    *
+    * Stage 45 uses this when the merchant chooses which
+    * generated fields should be written to WooCommerce.
+    */
+    let latestGeneratedContent = null;
+
 
     /*
      * ---------------------------------------------------------
@@ -613,16 +645,20 @@ document.addEventListener('DOMContentLoaded', function () {
             'checkbox';
 
         checkbox.checked =
-            true;
+            field !== 'meta_description';
 
-        checkbox.dataset.previewApplyField =
-            field;
+        checkbox.disabled =
+            field === 'meta_description';
+                checkbox.dataset.previewApplyField =
+                    field;
 
         const checkboxText =
             document.createElement('span');
 
         checkboxText.textContent =
-            'Use this field later';
+            field === 'meta_description'
+                ? 'Preview only'
+                : 'Apply this field';
 
         selection.append(
             checkbox,
@@ -707,6 +743,210 @@ document.addEventListener('DOMContentLoaded', function () {
             previewBody.scrollTop = 0;
         }
     }
+
+
+
+
+    /*
+    * ---------------------------------------------------------
+    * Stage 45: Build the Apply request.
+    * ---------------------------------------------------------
+    */
+
+    function buildApplyPayload() {
+        if (! latestGeneratedContent) {
+            return null;
+        }
+
+        const fields = {};
+
+        previewFields.querySelectorAll(
+            '[data-preview-apply-field]:checked'
+        ).forEach(function (checkbox) {
+            const field =
+                checkbox.dataset.previewApplyField;
+
+            if (
+                ! field
+                || field === 'meta_description'
+            ) {
+                return;
+            }
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    latestGeneratedContent,
+                    field
+                )
+            ) {
+                fields[field] =
+                    latestGeneratedContent[field];
+            }
+        });
+
+        return {
+            product_id: Number.parseInt(
+                openButton.getAttribute(
+                    'data-product-id'
+                ) || '',
+                10
+            ),
+            fields: fields,
+        };
+    }
+
+
+
+
+
+
+
+    async function requestApply(payload) {
+        const response = await fetch(
+            detitProductGenerate.applyRestUrl,
+            {
+                method: 'POST',
+
+                credentials: 'same-origin',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce':
+                        detitProductGenerate.nonce,
+                },
+
+                body: JSON.stringify(payload),
+            }
+        );
+
+        let data;
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            throw new Error(
+                'DetIt received an invalid apply response.'
+            );
+        }
+
+        if (! response.ok) {
+            throw new Error(
+                data && data.message
+                    ? data.message
+                    : (
+                        'DetIt could not apply the selected '
+                        + 'product content.'
+                    )
+            );
+        }
+
+        return data;
+    }
+
+
+
+
+    applyButton.addEventListener(
+        'click',
+        async function () {
+            clearPreviewMessages();
+
+            const payload = buildApplyPayload();
+
+            if (! payload) {
+                showPreviewError(
+                    'There is no generated content to apply.'
+                );
+
+                return;
+            }
+
+            if (
+                ! Number.isInteger(payload.product_id)
+                || payload.product_id < 1
+            ) {
+                showPreviewError(
+                    'The product ID is invalid.'
+                );
+
+                return;
+            }
+
+            if (
+                Object.keys(payload.fields).length === 0
+            ) {
+                showPreviewError(
+                    'Select at least one field to apply.'
+                );
+
+                return;
+            }
+
+            applyButton.disabled = true;
+
+            const originalButtonText =
+                applyButton.textContent;
+
+            applyButton.textContent = 'Applying…';
+
+            showPreviewStatus(
+                'DetIt is applying the selected content…'
+            );
+
+            try {
+                const result =
+                    await requestApply(payload);
+
+                console.log(
+                    'DetIt apply result:',
+                    result
+                );
+
+                clearPreviewMessages();
+
+                showPreviewStatus(
+                    'Content applied successfully. '
+                    + 'Refreshing the product editor…'
+                );
+
+                /*
+                * Reload the product editor from WooCommerce after
+                * ProductWriter has successfully saved the content.
+                *
+                * This prevents stale values in the already-open
+                * WordPress form from overwriting DetIt's changes
+                * if the merchant later clicks Update.
+                */
+                window.setTimeout(
+                    function () {
+                        window.location.reload();
+                    },
+                    1000
+                );
+            } catch (error) {
+                clearPreviewMessages();
+
+                showPreviewError(
+                    error instanceof Error
+                        ? error.message
+                        : (
+                            'DetIt could not apply the '
+                            + 'selected product content.'
+                        )
+                );
+            } finally {
+                applyButton.disabled = false;
+
+                applyButton.textContent =
+                    originalButtonText;
+            }
+        }
+    );
+
+
+
+
+
 
     /*
      * ---------------------------------------------------------
@@ -823,6 +1063,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     await requestGeneration(
                         payload
                     );
+
+                latestGeneratedContent = generated;
 
                 console.log(
                     'DetIt generation result:',

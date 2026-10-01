@@ -90,10 +90,10 @@ final class ProductGenerateMetaBox
             'title' => $product->get_name('edit'),
 
             'short_description' =>
-                $product->get_short_description('edit'),
+            $product->get_short_description('edit'),
 
             'description' =>
-                $product->get_description('edit'),
+            $product->get_description('edit'),
 
             'meta_description' => '',
 
@@ -113,30 +113,31 @@ final class ProductGenerateMetaBox
         }
 
         if (file_exists($jsFile)) {
-    wp_enqueue_script(
-        'detit-product-generate',
-        DETIT_URL . 'assets/js/product-generate.js',
-        [],
-        (string) filemtime($jsFile),
-        true
-    );
+            wp_enqueue_script(
+                'detit-product-generate',
+                DETIT_URL . 'assets/js/product-generate.js',
+                [],
+                (string) filemtime($jsFile),
+                true
+            );
 
-    wp_localize_script(
-        'detit-product-generate',
-        'detitProductGenerate',
-        [
-            'productId' => $productId,
+            wp_localize_script(
+                'detit-product-generate',
+                'detitProductGenerate',
+                [
+                    'productId' => $productId,
 
-            'restUrl' => esc_url_raw(
-                rest_url('detit/v2/generate')
-            ),
+                    'restUrl' => esc_url_raw(
+                        rest_url('detit/v2/generate')
+                    ),
+                    'applyRestUrl' => rest_url('detit/v2/apply'),
 
-            'nonce' => wp_create_nonce('wp_rest'),
+                    'nonce' => wp_create_nonce('wp_rest'),
 
-            'existing' => $existingContent,
-        ]
-    );
-}
+                    'existing' => $existingContent,
+                ]
+            );
+        }
     }
 
     public function render(WP_Post $post): void
@@ -446,9 +447,9 @@ final class ProductGenerateMetaBox
                         </button>
 
                     </div>
-                    
+
                 </div> <!-- detit-generation-controls -->
-                    
+
 
                 <div
                     id="detit-generation-preview"
@@ -533,7 +534,23 @@ final class ProductGenerateMetaBox
 
                         </button>
 
+                        <button
+                            type="button"
+                            class="button button-primary"
+                            id="detit-apply-generation">
+
+                            <?php
+                            esc_html_e(
+                                'Apply Selected Content',
+                                'detit-product-content-generator-for-woocommerce'
+                            );
+                            ?>
+
+                        </button>
+
                     </div>
+
+
 
                 </div>
 
