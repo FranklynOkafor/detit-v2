@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace DetIt\REST;
 
+use DetIt\Storage\GenerationRepository;
+use DetIt\WooCommerce\ProductSnapshot;
 use DetIt\WooCommerce\ProductWriter;
 
 if (! defined('ABSPATH')) {
@@ -125,6 +127,79 @@ final class ApplyController
                 );
             }
 
+            /*
+ * Stage 46:
+ * Capture the exact current values of every field
+ * that this request may modify.
+ */
+            $snapshotReader = new ProductSnapshot();
+
+            $beforeSnapshot = $snapshotReader->capture(
+                $productId,
+                array_keys($fields)
+            );
+
+            if ($beforeSnapshot === false) {
+                return new \WP_Error(
+                    'BEFORE_STATE_READ_FAILED',
+                    __(
+                        'DetIt could not safely read the current product state.',
+                        'detit-product-content-generator-for-woocommerce'
+                    ),
+                    ['status' => 500]
+                );
+            }
+
+            /*
+ * The history record MUST exist before ProductWriter
+ * is allowed to mutate WooCommerce.
+ */
+            $generationRepository = new GenerationRepository();
+
+            $historyId = $generationRepository->create(
+                [
+                    'product_id' => $productId,
+
+                    'user_id' =>
+                    get_current_user_id(),
+
+                    'operation' =>
+                    'apply',
+
+                    'before_snapshot' =>
+                    $beforeSnapshot,
+
+                    'generated_snapshot' =>
+                    $fields,
+
+                    'applied_fields' =>
+                    array_keys($fields),
+
+                    'status' =>
+                    'pending',
+                ]
+            );
+
+            /*
+            * Critical Stage 46 safety boundary:
+            *
+            * no history = no mutation.
+            */
+            if ($historyId === false) {
+                return new \WP_Error(
+                    'HISTORY_WRITE_FAILED',
+                    __(
+                        'DetIt could not create a recovery record, so no product changes were made.',
+                        'detit-product-content-generator-for-woocommerce'
+                    ),
+                    ['status' => 500]
+                );
+            }
+
+            /*
+    * Only after the before-state record exists may
+    * ProductWriter alter WooCommerce.
+    */
             $writer = new ProductWriter();
 
             if (! $writer->write($productId, $fields)) {
@@ -140,9 +215,10 @@ final class ApplyController
 
             return new \WP_REST_Response(
                 [
-                    'success'    => true,
-                    'product_id' => $productId,
-                    'fields'     => array_keys($fields),
+                    'success'       => true,
+                    'product_id'    => $productId,
+                    'fields'        => array_keys($fields),
+                    'generation_id' => $historyId,
                 ],
                 200
             );
