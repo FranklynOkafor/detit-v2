@@ -48,7 +48,12 @@ class GenerationRepository
             'generated_snapshot' => $this->encodeJson(
                 $data['generated_snapshot'] ?? null
             ),
-            'applied_fields'     => $this->encodeJson(
+
+            'after_snapshot' => $this->encodeJson(
+                $data['after_snapshot'] ?? null
+            ),
+
+            'applied_fields' => $this->encodeJson(
                 $data['applied_fields'] ?? null
             ),
             'status'             => $data['status'] ?? 'pending',
@@ -108,6 +113,64 @@ class GenerationRepository
         );
     }
 
+
+    public function findLatestCompletedApplyByProduct(
+        int $productId
+    ): ?array {
+        if ($productId <= 0) {
+            return null;
+        }
+
+        /*
+     * Find the latest Apply operation for this product,
+     * regardless of its current status.
+     *
+     * We must not skip an undone/failed Apply and expose
+     * an older completed Apply as though it were the
+     * latest operation.
+     */
+        $row = $this->wpdb->get_row(
+            $this->wpdb->prepare(
+                "SELECT *
+            FROM {$this->table}
+            WHERE product_id = %d
+            AND operation = 'apply'
+            ORDER BY id DESC
+            LIMIT 1",
+                $productId
+            ),
+            ARRAY_A
+        );
+
+        if ($row === null) {
+            return null;
+        }
+
+        $generation = $this->hydrate($row);
+
+        /*
+     * Undo is available only when the actual latest Apply
+     * completed successfully and contains full recovery data.
+     */
+        if (
+            ($generation['status'] ?? null) !== 'completed'
+            || ! is_array(
+                $generation['before_snapshot'] ?? null
+            )
+            || ! is_array(
+                $generation['after_snapshot'] ?? null
+            )
+            || ! is_array(
+                $generation['applied_fields'] ?? null
+            )
+        ) {
+            return null;
+        }
+
+        return $generation;
+    }
+
+
     public function update(
         int $generationId,
         array $changes
@@ -120,6 +183,7 @@ class GenerationRepository
             'language',
             'before_snapshot',
             'generated_snapshot',
+            'after_snapshot',
             'applied_fields',
             'status',
         ];
@@ -133,6 +197,7 @@ class GenerationRepository
             [
                 'before_snapshot',
                 'generated_snapshot',
+                'after_snapshot',
                 'applied_fields',
             ] as $jsonField
         ) {
@@ -181,6 +246,7 @@ class GenerationRepository
             [
                 'before_snapshot',
                 'generated_snapshot',
+                'after_snapshot',
                 'applied_fields',
             ] as $jsonField
         ) {

@@ -2,6 +2,7 @@
 
 namespace DetIt\Admin;
 
+use DetIt\Storage\GenerationRepository;
 use WP_Post;
 
 if (! defined('ABSPATH')) {
@@ -74,6 +75,22 @@ final class ProductGenerateMetaBox
             return;
         }
 
+
+        $generationRepository =
+            new GenerationRepository();
+
+        $latestUndoableGeneration =
+            $generationRepository
+            ->findLatestCompletedApplyByProduct(
+                $productId
+            );
+
+        $latestUndoGenerationId =
+            $latestUndoableGeneration !== null
+            ? (int) $latestUndoableGeneration['id']
+            : 0;
+
+
         $tagNames = wp_get_post_terms(
             $productId,
             'product_tag',
@@ -135,6 +152,12 @@ final class ProductGenerateMetaBox
                     'nonce' => wp_create_nonce('wp_rest'),
 
                     'existing' => $existingContent,
+
+                    'undoRestUrl' =>
+                    rest_url('detit/v2/undo'),
+
+                    'latestUndoGenerationId' =>
+                    $latestUndoGenerationId,
                 ]
             );
         }
@@ -166,6 +189,37 @@ final class ProductGenerateMetaBox
                 );
                 ?>
             </button>
+
+            <div class="detit-undo-panel">
+
+                <button
+                    type="button"
+                    class="button"
+                    id="detit-undo-generation"
+                    hidden>
+                    <?php
+                    esc_html_e(
+                        'Undo Last DetIt Apply',
+                        'detit-product-content-generator-for-woocommerce'
+                    );
+                    ?>
+                </button>
+
+                <p
+                    id="detit-undo-status"
+                    class="detit-message"
+                    role="status"
+                    aria-live="polite"
+                    hidden></p>
+
+                <p
+                    id="detit-undo-error"
+                    class="detit-message detit-message--error"
+                    role="alert"
+                    aria-live="assertive"
+                    hidden></p>
+
+            </div>
 
         </div>
 

@@ -248,16 +248,52 @@ final class ApplyController
             }
 
             /*
- * ProductWriter has successfully saved the selected
- * fields to WooCommerce.
- *
- * Finalize the history record.
- */
+            * ProductWriter has successfully saved the selected
+            * fields to WooCommerce.
+            *
+            * Capture the actual product state after the write.
+            */
+            $afterSnapshot = $snapshotReader->capture(
+                $productId,
+                array_keys($fields)
+            );
+
+            if ($afterSnapshot === false) {
+                if (
+                    defined('WP_DEBUG')
+                    && WP_DEBUG
+                ) {
+                    error_log(
+                        '[DetIt ApplyController] '
+                            . 'Product content was applied, but the '
+                            . 'after snapshot could not be captured '
+                            . 'for generation '
+                            . $historyId
+                            . '.'
+                    );
+                }
+
+                return new \WP_REST_Response(
+                    [
+                        'success'       => true,
+                        'product_id'    => $productId,
+                        'fields'        => array_keys($fields),
+                        'generation_id' => $historyId,
+                    ],
+                    200
+                );
+            }
+
+            /*
+            * Save the verified after-state and mark
+            * the Apply operation as completed.
+            */
             $historyMarkedCompleted =
                 $generationRepository->update(
                     $historyId,
                     [
-                        'status' => 'completed',
+                        'after_snapshot' => $afterSnapshot,
+                        'status'         => 'completed',
                     ]
                 );
 

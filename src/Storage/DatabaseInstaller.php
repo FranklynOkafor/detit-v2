@@ -110,6 +110,7 @@ class DatabaseInstaller
         language varchar(20) NULL DEFAULT NULL,
         before_snapshot longtext NULL,
         generated_snapshot longtext NULL,
+        after_snapshot longtext NULL,
         applied_fields longtext NULL,
         status varchar(20) NOT NULL DEFAULT 'pending',
         created_at datetime NOT NULL,

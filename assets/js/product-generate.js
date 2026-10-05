@@ -83,6 +83,26 @@ document.addEventListener('DOMContentLoaded', function () {
         'detit-preview-status'
     );
 
+
+    /*
+    * ---------------------------------------------------------
+    * Stage 50: Undo last DetIt Apply.
+    * ---------------------------------------------------------
+    */
+
+    const undoButton = document.getElementById(
+        'detit-undo-generation'
+    );
+
+    const undoStatus = document.getElementById(
+        'detit-undo-status'
+    );
+
+    const undoError = document.getElementById(
+        'detit-undo-error'
+    );
+
+
     /*
      * There are now two .detit-modal__body elements:
      * one for generation controls and one for preview.
@@ -154,6 +174,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
         statusMessage.textContent = message;
         statusMessage.removeAttribute('hidden');
+    }
+
+    function clearUndoMessages() {
+        if (undoStatus) {
+            undoStatus.textContent = '';
+            undoStatus.setAttribute('hidden', '');
+        }
+
+        if (undoError) {
+            undoError.textContent = '';
+            undoError.setAttribute('hidden', '');
+        }
+    }
+
+    function showUndoStatus(message) {
+        if (! undoStatus) {
+            return;
+        }
+
+        undoStatus.textContent = message;
+        undoStatus.removeAttribute('hidden');
+    }
+
+    function showUndoError(message) {
+        if (! undoError) {
+            return;
+        }
+
+        undoError.textContent = message;
+        undoError.removeAttribute('hidden');
     }
 
     function showPreviewError(message) {
@@ -329,10 +379,11 @@ document.addEventListener('DOMContentLoaded', function () {
         typeof detitProductGenerate === 'undefined'
         || ! detitProductGenerate.restUrl
         || ! detitProductGenerate.applyRestUrl
+        || ! detitProductGenerate.undoRestUrl
         || ! detitProductGenerate.nonce
     ) {
         console.warn(
-            'DetIt: Generation configuration is unavailable.'
+            'DetIt: generation configuration is incomplete.'
         );
 
         return;
@@ -346,6 +397,21 @@ document.addEventListener('DOMContentLoaded', function () {
     * generated fields should be written to WooCommerce.
     */
     let latestGeneratedContent = null;
+
+    const latestUndoGenerationId =
+        Number.parseInt(
+            detitProductGenerate.latestUndoGenerationId || '0',
+            10
+        );
+
+
+    if (undoButton) {
+        const undoAvailable =
+            Number.isInteger(latestUndoGenerationId)
+            && latestUndoGenerationId > 0;
+
+        undoButton.hidden = ! undoAvailable;
+    }
 
 
     /*
@@ -845,6 +911,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+    async function requestUndo(generationId) {
+        const response = await fetch(
+            detitProductGenerate.undoRestUrl,
+            {
+                method: 'POST',
+
+                credentials: 'same-origin',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce':
+                        detitProductGenerate.nonce,
+                },
+
+                body: JSON.stringify({
+                    generation_id: generationId,
+                }),
+            }
+        );
+
+        let data;
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            throw new Error(
+                'DetIt received an invalid Undo response.'
+            );
+        }
+
+        if (! response.ok) {
+            throw new Error(
+                data && data.message
+                    ? data.message
+                    : 'DetIt could not undo the generation.'
+            );
+        }
+
+        return data;
+    }
+
+
+
 
     applyButton.addEventListener(
         'click',
@@ -942,6 +1051,77 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     );
+
+
+    if (
+        undoButton
+        && Number.isInteger(latestUndoGenerationId)
+        && latestUndoGenerationId > 0
+    ) {
+        undoButton.addEventListener(
+            'click',
+            async function () {
+                clearUndoMessages();
+
+                const confirmed = window.confirm(
+                    'Undo the last DetIt Apply and restore the previous product content?'
+                );
+
+                if (! confirmed) {
+                    return;
+                }
+
+                undoButton.disabled = true;
+
+                const originalButtonText =
+                    undoButton.textContent;
+
+                undoButton.textContent = 'Undoing…';
+
+                showUndoStatus(
+                    'DetIt is restoring the previous product content…'
+                );
+
+                try {
+                    const result = await requestUndo(
+                        latestUndoGenerationId
+                    );
+
+                    console.log(
+                        'DetIt Undo result:',
+                        result
+                    );
+
+                    clearUndoMessages();
+
+                    showUndoStatus(
+                        'Previous product content restored. '
+                        + 'Refreshing the product editor…'
+                    );
+
+                    window.setTimeout(
+                        function () {
+                            window.location.reload();
+                        },
+                        1000
+                    );
+                } catch (error) {
+                    clearUndoMessages();
+
+                    showUndoError(
+                        error instanceof Error
+                            ? error.message
+                            : 'DetIt could not undo the generation.'
+                    );
+                } finally {
+                    undoButton.disabled = false;
+
+                    undoButton.textContent =
+                        originalButtonText;
+                }
+            }
+        );
+    }
 
 
 

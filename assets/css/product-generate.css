@@ -334,3 +334,9 @@ body.detit-modal-open {
         white-space: normal;
     }
 }
+
+
+
+#detit-undo-generation[hidden] {
+    display: none !important;
+}

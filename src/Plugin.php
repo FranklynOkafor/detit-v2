@@ -6,8 +6,10 @@ use DetIt\Admin\Menu;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
 use DetIt\Admin\ProductGenerateMetaBox;
+
 use DetIt\REST\GenerateController;
 use DetIt\REST\ApplyController;
+use DetIt\REST\UndoController;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -55,6 +57,9 @@ class Plugin
 
 		// Stage 45.
 		(new ApplyController())->registerHooks();
+
+		// Stage 50.
+		(new UndoController())->registerHooks();
 	}
 
 	private function bootDatabase(): void
