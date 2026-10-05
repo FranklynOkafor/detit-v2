@@ -203,6 +203,40 @@ final class ApplyController
             $writer = new ProductWriter();
 
             if (! $writer->write($productId, $fields)) {
+                /*
+     * ProductWriter failed after the history record
+     * had already been created.
+     *
+     * Mark this Apply attempt as failed.
+     */
+                $historyMarkedFailed =
+                    $generationRepository->update(
+                        $historyId,
+                        [
+                            'status' => 'failed',
+                        ]
+                    );
+
+                /*
+     * The ProductWriter failure is still the primary
+     * failure.
+     *
+     * If we also fail to update the audit record,
+     * log that secondary problem for debugging.
+     */
+                if (
+                    ! $historyMarkedFailed
+                    && defined('WP_DEBUG')
+                    && WP_DEBUG
+                ) {
+                    error_log(
+                        '[DetIt ApplyController] '
+                            . 'Could not mark generation '
+                            . $historyId
+                            . ' as failed.'
+                    );
+                }
+
                 return new \WP_Error(
                     'PRODUCT_WRITE_FAILED',
                     __(
@@ -210,6 +244,39 @@ final class ApplyController
                         'detit-product-content-generator-for-woocommerce'
                     ),
                     ['status' => 400]
+                );
+            }
+
+            /*
+ * ProductWriter has successfully saved the selected
+ * fields to WooCommerce.
+ *
+ * Finalize the history record.
+ */
+            $historyMarkedCompleted =
+                $generationRepository->update(
+                    $historyId,
+                    [
+                        'status' => 'completed',
+                    ]
+                );
+
+            /*
+ * The WooCommerce product has already been changed.
+ *
+ * Therefore a failure to finalize the history record
+ * must not be reported as a failed product Apply.
+ */
+            if (
+                ! $historyMarkedCompleted
+                && defined('WP_DEBUG')
+                && WP_DEBUG
+            ) {
+                error_log(
+                    '[DetIt ApplyController] '
+                        . 'Product content was applied, but generation '
+                        . $historyId
+                        . ' could not be marked as completed.'
                 );
             }
 
