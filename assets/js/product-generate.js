@@ -412,6 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         undoButton.hidden = ! undoAvailable;
     }
+    
 
 
     /*
