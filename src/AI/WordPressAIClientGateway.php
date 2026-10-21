@@ -76,6 +76,22 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                 'gemini-3.5-flash'
             );
 
+
+
+            /*
+             * Stage 53:
+             * Attach the prepared image only when
+             * the generation request contains one.
+             * Existing text-only requests are unchanged.
+             */
+            if ($request->imageDataUri() !== null) {
+                $builder = $builder->with_file(
+                    $request->imageDataUri()
+                );
+            }
+
+
+
             /*
              * Apply optional request configuration.
              */

@@ -16,11 +16,14 @@ final class GenerationRequest
 
     private ?string $systemInstruction;
 
+    private ?string $imageDataUri;
+
     public function __construct(
         string $prompt,
         ?float $temperature = null,
         ?int $maxTokens = null,
-        ?string $systemInstruction = null
+        ?string $systemInstruction = null,
+        ?string $imageDataUri = null
     ) {
         $prompt = trim($prompt);
 
@@ -36,9 +39,30 @@ final class GenerationRequest
             );
         }
 
+        /*
+         * Image input is optional.
+         * Only allow supported image data URI formats.
+         */
+        if ($imageDataUri !== null) {
+            $validImage = preg_match(
+                '~^data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$~D',
+                $imageDataUri
+            ) === 1;
+
+            if (
+                ! $validImage
+                || strlen($imageDataUri) > 3 * 1024 * 1024
+            ) {
+                throw new \InvalidArgumentException(
+                    'Invalid or oversized image data URI.'
+                );
+            }
+        }
+
         $this->prompt = $prompt;
         $this->temperature = $temperature;
         $this->maxTokens = $maxTokens;
+        $this->imageDataUri = $imageDataUri;
 
         $systemInstruction = $systemInstruction !== null
             ? trim($systemInstruction)
@@ -67,5 +91,10 @@ final class GenerationRequest
     public function systemInstruction(): ?string
     {
         return $this->systemInstruction;
+    }
+
+    public function imageDataUri(): ?string
+    {
+        return $this->imageDataUri;
     }
 }
