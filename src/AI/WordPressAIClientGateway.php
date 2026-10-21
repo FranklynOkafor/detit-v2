@@ -17,6 +17,42 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
             ?? new WordPressAIErrorNormalizer();
     }
 
+
+    public function supportsImageInput(): bool
+    {
+        if (! function_exists('wp_ai_client_prompt')) {
+            return false;
+        }
+
+        try {
+            /*
+         * A tiny valid PNG is enough to tell the
+         * AI Client that the prompt includes an image.
+         *
+         * This image is never sent to a provider
+         * during the capability check.
+         */
+            $image = 'data:image/png;base64,'
+                . 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe'
+                . 'AAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAEl'
+                . 'FTkSuQmCC';
+
+            $builder = wp_ai_client_prompt()
+                ->with_text(
+                    'Describe the product shown in this image.'
+                )
+                ->with_file($image)
+                ->using_model_preference(
+                    'gemini-3.5-flash'
+                );
+
+            return $builder->is_supported_for_text_generation();
+        } catch (\Throwable $throwable) {
+            return false;
+        }
+    }
+
+
     public function generate(
         GenerationRequest $request
     ): AIClientResult {

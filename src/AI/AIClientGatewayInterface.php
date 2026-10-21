@@ -11,4 +11,6 @@ interface AIClientGatewayInterface
     public function generate(
         GenerationRequest $request
     ): AIClientResult;
+
+    public function supportsImageInput(): bool;
 }

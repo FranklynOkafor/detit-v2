@@ -4,6 +4,7 @@ namespace DetIt\Admin;
 
 use DetIt\Storage\GenerationRepository;
 use WP_Post;
+use DetIt\AI\WordPressAIClientGateway;
 
 if (! defined('ABSPATH')) {
     exit;
@@ -165,6 +166,9 @@ final class ProductGenerateMetaBox
 
     public function render(WP_Post $post): void
     {
+        $imageInputSupported = (
+            new WordPressAIClientGateway()
+        )->supportsImageInput();
 ?>
         <div class="detit-generate-panel">
 
@@ -364,6 +368,58 @@ final class ProductGenerateMetaBox
                             </label>
 
                         </fieldset>
+
+                        <fieldset class="detit-field-group">
+
+                            <legend>
+                                <?php
+                                esc_html_e(
+                                    'Product image understanding',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </legend>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    id="detit-use-image-context"
+                                    disabled>
+
+                                <?php
+                                esc_html_e(
+                                    'Use product image as AI context',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </label>
+
+                            <p class="description" id="detit-image-capability-note">
+
+                                <?php if ($imageInputSupported): ?>
+
+                                    <?php
+                                    esc_html_e(
+                                        'Image understanding is supported. Image-aware generation will be enabled in a later stage.',
+                                        'detit-product-content-generator-for-woocommerce'
+                                    );
+                                    ?>
+
+                                <?php else: ?>
+
+                                    <?php
+                                    esc_html_e(
+                                        'Image understanding is unavailable with the current AI configuration. Text generation remains available.',
+                                        'detit-product-content-generator-for-woocommerce'
+                                    );
+                                    ?>
+
+                                <?php endif; ?>
+
+                            </p>
+
+                        </fieldset>
+
 
                         <div class="detit-form-field">
 
