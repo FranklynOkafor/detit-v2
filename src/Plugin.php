@@ -4,6 +4,7 @@ namespace DetIt;
 
 use DetIt\Admin\Menu;
 use DetIt\Abilities\ProductSummaryAbility;
+use DetIt\Abilities\ProductIssuesAbility;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
 use DetIt\Admin\ProductGenerateMetaBox;
@@ -81,6 +82,7 @@ class Plugin
 	{
 		// WordPress 6.9+ registers read-only abilities. Older WP keeps working.
 		(new ProductSummaryAbility())->registerHooks();
+		(new ProductIssuesAbility())->registerHooks();
 	}
 
 	private function bootQueue(): void
