@@ -11,6 +11,7 @@
  */
 
 use DetIt\Catalog\ProductIssueDetector;
+use DetIt\Abilities\ProductIssuesAbility;
 use DetIt\WooCommerce\ProductContext;
 use DetIt\WooCommerce\ProductReader;
 
@@ -129,6 +130,56 @@ if ($real === null) {
             && in_array($issue['severity'], ['high', 'medium', 'info'], true)
     )) === count($issues));
     echo 'REAL_PRODUCT_46_ISSUE_CODES: ' . wp_json_encode($get($issues)) . PHP_EOL;
+}
+
+
+// Integration: the Stage 56 Abilities API remains protected for issue access.
+$ability = function_exists('wp_get_ability')
+    ? wp_get_ability(ProductIssuesAbility::NAME)
+    : null;
+
+$check('ISSUE_ABILITY_REGISTERED', $ability instanceof \WP_Ability);
+
+if ($ability instanceof \WP_Ability) {
+    $meta = $ability->get_meta();
+    $check('ISSUE_ABILITY_NOT_PUBLIC_REST', ($meta['show_in_rest'] ?? false) === false);
+    $check('ISSUE_ABILITY_READ_ONLY', ($meta['annotations']['readonly'] ?? false) === true);
+
+    wp_set_current_user(0);
+    $check('ISSUE_ABILITY_DENIES_ANONYMOUS', is_wp_error(
+        $ability->execute(['product_id' => 46])
+    ));
+
+    $authorizedId = 0;
+    foreach (get_users(['role' => 'administrator', 'fields' => 'ID', 'number' => 100]) as $candidate) {
+        if (
+            user_can((int) $candidate, 'manage_woocommerce')
+            && user_can((int) $candidate, 'edit_post', 46)
+        ) {
+            $authorizedId = (int) $candidate;
+            break;
+        }
+    }
+
+    if ($authorizedId > 0 && $real !== null) {
+        wp_set_current_user($authorizedId);
+        $result = $ability->execute(['product_id' => 46]);
+        $check('ISSUE_ABILITY_AUTHORIZED_READ', is_array($result));
+        $check('ISSUE_ABILITY_MATCHES_DETECTOR', is_array($result)
+            && $result['issue_count'] === count($detector->detect($real))
+            && $result['issues'] === $detector->detect($real));
+        $check('ISSUE_ABILITY_REJECTS_WRONG_TYPE', is_wp_error(
+            $ability->execute(['product_id' => '46'])
+        ));
+        $check('ISSUE_ABILITY_REJECTS_EXTRA_FIELDS', is_wp_error(
+            $ability->execute(['product_id' => 46, 'unexpected' => true])
+        ));
+        $check('ISSUE_ABILITY_DENIES_INVALID_PRODUCT', is_wp_error(
+            $ability->execute(['product_id' => 999999999])
+        ));
+    } else {
+        echo "ISSUE_ABILITY_AUTHORIZED_CHECK: SKIPPED (admin or product 46 unavailable)\n";
+    }
 }
 
 echo 'RESULT: ' . ($errors === 0 ? 'PASS' : 'FAIL (' . $errors . ')') . PHP_EOL;
