@@ -188,7 +188,7 @@ foreach ($fixtures as $fixture) {
         $description = (string) $parsed->shortDescription();
     } catch (\InvalidArgumentException $exception) {
         ++$counts['invalid_output'];
-        echo 'INVALID_OUTPUT - model returned invalid JSON: 
+        echo 'INVALID_OUTPUT - model returned invalid JSON: '
             . substr((string) $response->text(), 0, 250)
             . PHP_EOL;
         continue;
