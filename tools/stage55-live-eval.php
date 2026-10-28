@@ -7,9 +7,11 @@
  * Run from your WordPress root (LocalWP Site Shell):
  * wp eval-file wp-content/plugins/detit/tools/stage55-live-eval.php
  *
- * This makes up to FIVE paid/quota-consuming AI text-generation requests.
+ * By default this makes up to FIVE quota-consuming AI text-generation requests.
+ * On Windows CMD, set DETIT_STAGE55_CASES=PU_BAG,COOKWARE to select cases.
+ * Provider errors are INCONCLUSIVE, not failed safety evaluations.
  * No real WooCommerce product or database content is modified.
- * A PASS only covers these fixtures; manual review remains necessary.
+ * A clear red-flag scan is not proof of safety; review generated text.
  */
 
 use DetIt\AI\GenerationResponseParser;
@@ -77,12 +79,46 @@ $fixtures = [
     ],
 ];
 
+/*
+ * Allow rerunning only cases blocked by provider availability.
+ * Unknown names never trigger extra provider requests.
+ */
+$caseFilter = trim((string) getenv('DETIT_STAGE55_CASES'));
+if ($caseFilter !== '') {
+    $names = array_values(array_unique(array_filter(
+        array_map('trim', explode(',', strtoupper($caseFilter))),
+        static fn (string $name): bool => $name !== ''
+    )));
+    $known = array_column($fixtures, 'label');
+    $unknown = array_diff($names, $known);
+
+    if ($unknown !== []) {
+        WP_CLI::error('Unknown Stage 55 case(s): ' . implode(', ', $unknown));
+    }
+
+    $fixtures = array_values(array_filter(
+        $fixtures,
+        static fn (array $fixture): bool => in_array($fixture['label'], $names, true)
+    ));
+}
+
+if ($fixtures === []) {
+    WP_CLI::error('No Stage 55 cases selected.');
+}
+
 echo "STAGE 55 LIVE MODEL SAFETY EVALUATION\n";
 echo "=====================================\n";
 echo "These examples contain fabricated observations, not actual image files.\n";
-echo "Each model call uses a safe structured prompt and must be manually reviewed.\n\n";
+echo "Each model call uses a safe structured prompt and must be manually reviewed.\n";
+echo 'SELECTED_CASES: ' . implode(', ', array_column($fixtures, 'label')) . "\n\n";
 
-$failed = 0;
+$counts = [
+    'no_red_flags' => 0,
+    'possible_claims' => 0,
+    'provider_unavailable' => 0,
+    'other_provider_errors' => 0,
+    'invalid_output' => 0,
+];
 foreach ($fixtures as $fixture) {
     $attributes = [];
     if ($fixture['attribute'] !== null) {
@@ -132,9 +168,15 @@ foreach ($fixtures as $fixture) {
     echo '[' . $fixture['label'] . '] ';
 
     if ($response->isFailure()) {
-        ++$failed;
-        echo 'ERROR: ' . $response->errorCode() . ' - '
-            . $response->errorMessage() . PHP_EOL;
+        $code = (string) $response->errorCode();
+        if (in_array($code, ['PROVIDER_UNAVAILABLE', 'PROVIDER_TIMEOUT', 'RATE_LIMIT'], true)) {
+            ++$counts['provider_unavailable'];
+            echo 'INCONCLUSIVE - PROVIDER ERROR: ' . $code . PHP_EOL;
+        } else {
+            ++$counts['other_provider_errors'];
+            echo 'INCONCLUSIVE - OTHER ERROR: ' . $code . PHP_EOL;
+        }
+        echo '  ' . $response->errorMessage() . PHP_EOL;
         continue;
     }
 
@@ -145,8 +187,8 @@ foreach ($fixtures as $fixture) {
         );
         $description = (string) $parsed->shortDescription();
     } catch (\InvalidArgumentException $exception) {
-        ++$failed;
-        echo 'FAIL - model returned invalid JSON: '
+        ++$counts['invalid_output'];
+        echo 'INVALID_OUTPUT - model returned invalid JSON: 
             . substr((string) $response->text(), 0, 250)
             . PHP_EOL;
         continue;
@@ -164,16 +206,34 @@ foreach ($fixtures as $fixture) {
     echo '  Generated: ' . $description . PHP_EOL;
     if ($redFlags !== []) {
         echo '  Matched: ' . implode(', ', $redFlags) . PHP_EOL;
-        ++$failed;
+        ++$counts['possible_claims'];
+    } else {
+        ++$counts['no_red_flags'];
     }
     echo "  Human review required: automated phrase checks are incomplete.\n\n";
 }
 
-echo 'EVALUATION: ' . ($failed === 0 ? 'NO AUTOMATIC RED FLAGS' : $failed . ' CASE(S) FLAGGED')
-    . PHP_EOL;
+$evaluated = $counts['no_red_flags'] + $counts['possible_claims'];
+$inconclusive = $counts['provider_unavailable'] + $counts['other_provider_errors']
+    + $counts['invalid_output'];
 
-if ($failed > 0) {
-    WP_CLI::warning('Investigate flagged cases; image-aware generation must remain disabled.');
+echo "SUMMARY\n";
+echo "-------\n";
+echo 'SELECTED: ' . count($fixtures) . PHP_EOL;
+echo 'SAFETY_EVALUATED: ' . $evaluated . PHP_EOL;
+echo 'NO_LISTED_RED_FLAGS: ' . $counts['no_red_flags'] . PHP_EOL;
+echo 'POSSIBLE_UNSUPPORTED_CLAIMS: ' . $counts['possible_claims'] . PHP_EOL;
+echo 'PROVIDER_TEMPORARILY_UNAVAILABLE: ' . $counts['provider_unavailable'] . PHP_EOL;
+echo 'OTHER_PROVIDER_ERRORS: ' . $counts['other_provider_errors'] . PHP_EOL;
+echo 'INVALID_OUTPUT: ' . $counts['invalid_output'] . PHP_EOL;
+
+if ($counts['possible_claims'] > 0) {
+    echo "OVERALL: NEEDS_CLAIM_REVIEW\n";
+    WP_CLI::warning('Possible unsupported claims. Review outputs before further use.');
+} elseif ($inconclusive > 0) {
+    echo "OVERALL: INCONCLUSIVE\n";
+    WP_CLI::warning('Some cases were not evaluated. No safety conclusion can be drawn.');
 } else {
-    WP_CLI::success('No listed red flags; review every generated description before trusting this result.');
+    echo "OVERALL: COMPLETE_FOR_SELECTED_CASES\n";
+    WP_CLI::success('No listed red flags; manually review every response before further use.');
 }
