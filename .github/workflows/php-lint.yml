@@ -1,0 +1,24 @@
+name: PHP syntax checks
+
+on:
+  pull_request:
+    paths:
+      - '**/*.php'
+      - '.github/workflows/php-lint.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - '**/*.php'
+      - '.github/workflows/php-lint.yml'
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint all PHP source and smoke scripts
+        run: |
+          set -euo pipefail
+          find . -type f -name '*.php' -not -path './vendor/*' -print0 |
+            xargs -0 -r -n1 php -l
