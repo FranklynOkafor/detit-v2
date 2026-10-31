@@ -219,7 +219,24 @@ final class ContentHealthPage
                                             }
                                             $labels[] = (string) ($issue['message'] ?? $issue['code'] ?? '');
                                         }
-                                        echo esc_html(implode('; ', array_filter($labels)));
+                                        $labels = array_values(array_filter(
+                                            $labels,
+                                            static fn (string $label): bool => $label !== ''
+                                        ));
+
+                                        if ($labels === []) {
+                                            echo '&mdash;';
+                                        } else {
+                                            echo '<ul style="margin:0; padding-left:18px; list-style:disc;">';
+
+                                            foreach ($labels as $label) {
+                                                echo '<li style="margin-bottom:6px;">'
+                                                    . esc_html($label)
+                                                    . '</li>';
+                                            }
+
+                                            echo '</ul>';
+                                        }
                                     }
                                     ?>
                                 </td>
