@@ -21,6 +21,43 @@ The dashboard is available to logged-in users with `manage_woocommerce`.
 Each visible row also checks `edit_post` permissions. POST scan operations
 require a valid WordPress nonce and check permissions again.
 
+## Scanning selected products (merchant-selected bulk audit)
+
+The dashboard now offers **Scan selected products**, separate from automatic
+catalog scanning:
+
+1. Search or filter the product table to find products to audit.
+2. Tick the checkbox beside each product you want.
+3. Use the header checkbox **Select all products on this page** when useful.
+4. Click **Scan selected products** to audit **only those selected IDs**.
+
+Selections apply to the current page (up to 20 visible products), not every
+product matching a search across other pages. Change pages or search terms
+before selecting to avoid losing the current page's selection. The underlying
+`BatchCatalogAuditor::scanIds()` enforces a server-side maximum of 25 and
+checks product-level editing rights, with individual failures reported
+without aborting other selected scans.
+
+The selected-scan action requires a valid WordPress admin nonce and
+`manage_woocommerce` capability. It rejects empty, malformed, negative
+and excessive selections before any index writes. It **only updates DetIt's
+audit index**, never product content. Successful submissions display
+completed/failed counts after redirect.
+
+The existing **Auto-scan: first 10 by ID** and **Auto-scan: next 10 by ID**
+buttons remain for merchants who want to walk the catalog in product-ID
+order. These automatic buttons do not use the selected checkboxes, table
+search or sorting.
+
+Run the read-only UI/input smoke test:
+
+```
+wp eval-file wp-content/plugins/detit/tools/stage62-selected-scan-smoke.php
+```
+
+Then manually try selecting two visible products, scanning them, and
+verifying that the success notice reports two audited. No AI calls occur.
+
 ## Dashboard product search and sorting
 
 The dashboard includes a **Search products** field and a **Sort by** menu:
