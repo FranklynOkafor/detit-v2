@@ -84,6 +84,7 @@ final class ProductCatalogAuditor
         $existing = $index->findByProduct($productId);
         $unchanged = $existing !== null
             && $existing['source_hash'] === $sourceHash
+            && ($existing['rules_version'] ?? '') === ProductHealthScorer::RULES_VERSION
             && (int) $existing['content_health'] === $health['score']
             && $existing['issue_flags'] === $issues
             && ! empty($existing['last_scanned_at']);
@@ -100,6 +101,7 @@ final class ProductCatalogAuditor
                 'content_health' => $health['score'],
                 'issue_flags' => $issues,
                 'source_hash' => $sourceHash,
+                'rules_version' => ProductHealthScorer::RULES_VERSION,
                 'last_scanned_at' => $scannedAt,
             ]
         );
