@@ -66,12 +66,12 @@ final class ContentHealthPage
             $this->redirect(['detit_error' => sanitize_key($result->get_error_code())]);
         }
 
-        $this->redirect([
+        $this->redirect(array_merge($this->viewReturnArgs(), [
             'detit_completed' => $result['completed'],
             'detit_failed' => $result['failed'],
             'detit_next' => $result['has_more'] ? $result['next_after_id'] : 0,
             'detit_more' => $result['has_more'] ? 1 : 0,
-        ]);
+        ]));
     }
 
     public function scanProduct(): void
@@ -92,7 +92,9 @@ final class ContentHealthPage
             $this->redirect(['detit_error' => sanitize_key($result->get_error_code())]);
         }
 
-        $this->redirect(['detit_product_scanned' => $id]);
+        $this->redirect(array_merge($this->viewReturnArgs(), [
+            'detit_product_scanned' => $id,
+        ]));
     }
 
     public function renderPage(): void
@@ -103,8 +105,14 @@ final class ContentHealthPage
             ? sanitize_key(wp_unslash($_GET['audit_filter']))
             : 'all';
         $page = isset($_GET['paged']) ? max(1, absint($_GET['paged'])) : 1;
+        $search = isset($_GET['product_search']) && is_string($_GET['product_search'])
+            ? sanitize_text_field(wp_unslash($_GET['product_search']))
+            : '';
+        $sort = isset($_GET['sort']) && is_string($_GET['sort'])
+            ? sanitize_key(wp_unslash($_GET['sort']))
+            : 'id_asc';
 
-        $data = (new ContentHealthDashboardRepository())->browse($filter, $page);
+        $data = (new ContentHealthDashboardRepository())->browse($filter, $page, $search, $sort);
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('DetIt Content Health', self::TD); ?></h1>
@@ -140,20 +148,60 @@ final class ContentHealthPage
                         'unscanned' => __('Not scanned', self::TD),
                         'needs_attention' => __('Below 70', self::TD),
                     ] as $value => $label) : ?>
-                        <a href="<?php echo esc_url($this->url(['audit_filter' => $value])); ?>"
+                        <a href="<?php echo esc_url($this->url([
+                            'audit_filter' => $value,
+                            'product_search' => $data['search'],
+                            'sort' => $data['sort'],
+                        ])); ?>"
                            <?php echo $data['filter'] === $value ? 'aria-current="page"' : ''; ?>>
                             <?php echo esc_html($label); ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
 
+                <form method="get" action="<?php echo esc_url(admin_url('admin.php')); ?>"
+                    style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0;">
+                    <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
+                    <input type="hidden" name="audit_filter" value="<?php echo esc_attr($data['filter']); ?>">
+
+                    <label for="detit-product-search"><?php esc_html_e('Search products', self::TD); ?></label>
+                    <input type="search" id="detit-product-search" name="product_search"
+                        value="<?php echo esc_attr($data['search']); ?>"
+                        placeholder="<?php esc_attr_e('Product name or ID', self::TD); ?>"
+                        maxlength="120" style="min-width:200px;">
+
+                    <label for="detit-sort-order"><?php esc_html_e('Sort by', self::TD); ?></label>
+                    <select id="detit-sort-order" name="sort">
+                        <?php foreach ([
+                            'id_asc' => __('Original order (ID)', self::TD),
+                            'score_asc' => __('Score: low to high', self::TD),
+                            'score_desc' => __('Score: high to low', self::TD),
+                            'name_asc' => __('Name: A to Z', self::TD),
+                            'name_desc' => __('Name: Z to A', self::TD),
+                        ] as $sortKey => $sortLabel) : ?>
+                            <option value="<?php echo esc_attr($sortKey); ?>"
+                                <?php selected($data['sort'], $sortKey); ?>>
+                                <?php echo esc_html($sortLabel); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Apply', self::TD); ?></button>
+                    <?php if ($data['search'] !== '') : ?>
+                        <a href="<?php echo esc_url($this->url([
+                            'audit_filter' => $data['filter'],
+                            'sort' => $data['sort'],
+                        ])); ?>"><?php esc_html_e('Clear search', self::TD); ?></a>
+                    <?php endif; ?>
+                </form>
+
                 <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:16px 0;">
-                    <?php $this->batchForm(0, __('Scan first 10 products', self::TD)); ?>
+                    <?php $this->batchForm(0, __('Scan first 10 products', self::TD), $data); ?>
                     <?php
                     $more = isset($_GET['detit_more']) && absint($_GET['detit_more']) === 1;
                     $next = isset($_GET['detit_next']) ? absint($_GET['detit_next']) : 0;
                     if ($more && $next > 0) {
-                        $this->batchForm($next, __('Continue: next 10', self::TD));
+                        $this->batchForm($next, __('Continue: next 10', self::TD), $data);
                     }
                     ?>
                     <span class="description"><?php esc_html_e(
@@ -245,7 +293,7 @@ final class ContentHealthPage
                                         ? esc_html(get_date_from_gmt($product['last_scanned_at'], 'Y-m-d H:i'))
                                         : '&mdash;';
                                 ?></td>
-                                <td><?php $this->productForm($product['product_id']); ?></td>
+                                <td><?php $this->productForm($product['product_id'], $data); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -264,12 +312,16 @@ final class ContentHealthPage
                     <?php if ($data['page'] > 1) : ?>
                         <a href="<?php echo esc_url($this->url([
                             'audit_filter' => $data['filter'],
+                            'product_search' => $data['search'],
+                            'sort' => $data['sort'],
                             'paged' => $data['page'] - 1,
                         ])); ?>"><?php esc_html_e('Previous', self::TD); ?></a>
                     <?php endif; ?>
                     <?php if ($data['page'] < $data['pages']) : ?>
                         <a href="<?php echo esc_url($this->url([
                             'audit_filter' => $data['filter'],
+                            'product_search' => $data['search'],
+                            'sort' => $data['sort'],
                             'paged' => $data['page'] + 1,
                         ])); ?>"><?php esc_html_e('Next', self::TD); ?></a>
                     <?php endif; ?>
@@ -279,28 +331,73 @@ final class ContentHealthPage
         <?php
     }
 
-    private function batchForm(int $cursor, string $label): void
+    private function batchForm(int $cursor, string $label, array $view): void
     {
         ?>
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
             <input type="hidden" name="action" value="detit_health_scan_batch">
             <input type="hidden" name="after_product_id" value="<?php echo (int) $cursor; ?>">
+            <?php $this->renderViewFields($view); ?>
             <?php wp_nonce_field('detit_health_scan_batch'); ?>
             <button type="submit" class="button button-primary"><?php echo esc_html($label); ?></button>
         </form>
         <?php
     }
 
-    private function productForm(int $productId): void
+    private function productForm(int $productId, array $view): void
     {
         ?>
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
             <input type="hidden" name="action" value="detit_health_scan_product">
             <input type="hidden" name="product_id" value="<?php echo (int) $productId; ?>">
+            <?php $this->renderViewFields($view); ?>
             <?php wp_nonce_field('detit_health_scan_product_' . $productId); ?>
             <button type="submit" class="button"><?php esc_html_e('Rescan', self::TD); ?></button>
         </form>
         <?php
+    }
+
+    /**
+     * Preserve current filters across POST/redirect/GET scan actions.
+     * These are presentation options only; the repository validates them.
+     */
+    private function renderViewFields(array $view): void
+    {
+        foreach ([
+            'audit_filter' => $view['filter'] ?? 'all',
+            'product_search' => $view['search'] ?? '',
+            'sort' => $view['sort'] ?? 'id_asc',
+            'paged' => $view['page'] ?? 1,
+        ] as $key => $value) {
+            printf(
+                '<input type="hidden" name="%s" value="%s">',
+                esc_attr($key),
+                esc_attr((string) $value)
+            );
+        }
+    }
+
+    private function viewReturnArgs(): array
+    {
+        $args = [];
+
+        foreach (['audit_filter', 'sort'] as $key) {
+            if (isset($_POST[$key]) && is_string($_POST[$key])) {
+                $args[$key] = sanitize_key(wp_unslash($_POST[$key]));
+            }
+        }
+
+        if (isset($_POST['product_search']) && is_string($_POST['product_search'])) {
+            $args['product_search'] = sanitize_text_field(
+                wp_unslash($_POST['product_search'])
+            );
+        }
+
+        if (isset($_POST['paged']) && is_scalar($_POST['paged'])) {
+            $args['paged'] = max(1, absint($_POST['paged']));
+        }
+
+        return $args;
     }
 
     private function renderNotice(): void
