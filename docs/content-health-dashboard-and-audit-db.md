@@ -21,6 +21,31 @@ The dashboard is available to logged-in users with `manage_woocommerce`.
 Each visible row also checks `edit_post` permissions. POST scan operations
 require a valid WordPress nonce and check permissions again.
 
+## Dashboard product search and sorting
+
+The dashboard includes a **Search products** field and a **Sort by** menu:
+
+- Search by product name (partial matches) or exact numeric product ID.
+- Sort by score **low to high** or **high to low**; products without an
+  audit appear after scored products in both directions.
+- Sort alphabetically **A to Z** or **Z to A**, or use original product-ID order.
+- Search and sorting run in the database *before* paging, so they apply to
+  the full matching catalog rather than only the first 20 products.
+- Active filter, search and sort options are preserved across filter tabs,
+  pagination and individual/batch scan redirects.
+- The **Clear search** link removes the search term while keeping your
+  current filter and sort order.
+- Scan success or failure redirects to an on-page feedback anchor so the
+  notice is visible rather than only silently reloading.
+
+To test search and sort without changing any records:
+
+```
+wp eval-file wp-content/plugins/detit/tools/stage62-search-sort-smoke.php
+```
+
+This focused smoke test is read-only.
+
 Scores measure catalog **field completeness**, not search rankings, content
 truthfulness or product conversion potential. A score below 70 means that
 one or more important content fields are missing.
