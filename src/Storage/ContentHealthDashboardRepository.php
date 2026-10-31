@@ -22,7 +22,25 @@ final class ContentHealthDashboardRepository
 
     private const FILTERS = ['all', 'scanned', 'unscanned', 'needs_attention'];
 
-    public function browse(string $filter = 'all', int $page = 1): array|\WP_Error
+    /**
+     * SQL fragments are hard-coded rather than interpolated from request data.
+     * Unknown sort values fall back to product-ID order.
+     */
+    private const SORTS = [
+        'id_asc' => 'p.ID ASC',
+        'name_asc' => 'p.post_title ASC, p.ID ASC',
+        'name_desc' => 'p.post_title DESC, p.ID ASC',
+        // Unscanned products have no meaningful score: keep them last.
+        'score_asc' => 'CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END ASC, i.content_health ASC, p.post_title ASC, p.ID ASC',
+        'score_desc' => 'CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END ASC, i.content_health DESC, p.post_title ASC, p.ID ASC',
+    ];
+
+    public function browse(
+        string $filter = 'all',
+        int $page = 1,
+        string $search = '',
+        string $sort = 'id_asc'
+    ): array|\WP_Error
     {
         if (
             ! is_user_logged_in()
@@ -32,6 +50,13 @@ final class ContentHealthDashboardRepository
         }
 
         $filter = in_array($filter, self::FILTERS, true) ? $filter : 'all';
+        $sort = isset(self::SORTS[$sort]) ? $sort : 'id_asc';
+        // Allow useful product searches without letting unbounded URL strings
+        // drive expensive queries or grow the rendered form.
+        $search = trim($search);
+        $search = function_exists('mb_substr')
+            ? mb_substr($search, 0, 120, 'UTF-8')
+            : substr($search, 0, 120);
         $page = max(1, $page);
 
         global $wpdb;
@@ -49,6 +74,24 @@ final class ContentHealthDashboardRepository
         } elseif ($filter === 'needs_attention') {
             $where .= ' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70';
         }
+
+        // Apply search before COUNT and LIMIT, so it covers the full catalog
+        // and all pages rather than filtering just the displayed 20 rows.
+        if ($search !== '') {
+            $like = '%' . $wpdb->esc_like($search) . '%';
+
+            if (ctype_digit($search)) {
+                $where .= $wpdb->prepare(
+                    ' AND (p.post_title LIKE %s OR p.ID = %d)',
+                    $like,
+                    (int) $search
+                );
+            } else {
+                $where .= $wpdb->prepare(' AND p.post_title LIKE %s', $like);
+            }
+        }
+
+        $orderBy = self::SORTS[$sort];
 
         $from = "FROM {$wpdb->posts} p
             LEFT JOIN {$table} i ON i.product_id = p.ID";
@@ -86,7 +129,7 @@ final class ContentHealthDashboardRepository
                     i.rules_version, i.last_scanned_at
                  {$from}
                  WHERE {$where}
-                 ORDER BY p.ID ASC
+                 ORDER BY {$orderBy}
                  LIMIT %d OFFSET %d",
                 self::PAGE_SIZE,
                 $offset
@@ -149,6 +192,8 @@ final class ContentHealthDashboardRepository
 
         return [
             'filter' => $filter,
+            'search' => $search,
+            'sort' => $sort,
             'page' => $page,
             'pages' => $pages,
             'matched' => $count,
