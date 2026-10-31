@@ -121,7 +121,9 @@ final class ContentHealthPage
                 self::TD
             ); ?></p>
 
-            <?php $this->renderNotice(); ?>
+            <div id="detit-feedback" role="status">
+                <?php $this->renderNotice(); ?>
+            </div>
 
             <?php if (is_wp_error($data)) : ?>
                 <div class="notice notice-error"><p><?php echo esc_html($data->get_error_message()); ?></p></div>
@@ -450,7 +452,8 @@ final class ContentHealthPage
 
     private function redirect(array $args): void
     {
-        wp_safe_redirect($this->url($args));
+        // Jump to the visible confirmation after a POST/redirect/GET scan.
+        wp_safe_redirect($this->url($args) . '#detit-feedback');
         exit;
     }
 }
