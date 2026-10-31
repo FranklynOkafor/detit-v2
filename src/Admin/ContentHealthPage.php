@@ -29,6 +29,7 @@ final class ContentHealthPage
         add_action('admin_menu', [$this, 'registerMenu'], 30);
         add_action('admin_post_detit_health_scan_batch', [$this, 'scanBatch']);
         add_action('admin_post_detit_health_scan_product', [$this, 'scanProduct']);
+        add_action('admin_post_detit_health_scan_selected', [$this, 'scanSelected']);
     }
 
     public function registerMenu(): void
@@ -72,6 +73,88 @@ final class ContentHealthPage
             'detit_next' => $result['has_more'] ? $result['next_after_id'] : 0,
             'detit_more' => $result['has_more'] ? 1 : 0,
         ]));
+    }
+
+    /**
+     * Run an explicit audit only for products selected in the table.
+     * WordPress submits checkbox IDs as strings, while BatchCatalogAuditor
+     * requires positive integers. Validate everything before any writes.
+     */
+    public function scanSelected(): void
+    {
+        $this->requirePermission();
+        check_admin_referer('detit_health_scan_selected');
+
+        $raw = isset($_POST['product_ids'])
+            ? wp_unslash($_POST['product_ids'])
+            : [];
+
+        $ids = self::parseSelectedIds($raw);
+        if (is_wp_error($ids)) {
+            $this->redirect(array_merge($this->viewReturnArgs(), [
+                'detit_error' => $ids->get_error_code(),
+            ]));
+        }
+
+        // scanIds() enforces the existing per-product edit permissions and
+        // isolates failed products without mutating WooCommerce product data.
+        $result = (new BatchCatalogAuditor())->scanIds($ids);
+        if (is_wp_error($result)) {
+            $this->redirect(array_merge($this->viewReturnArgs(), [
+                'detit_error' => sanitize_key($result->get_error_code()),
+            ]));
+        }
+
+        $this->redirect(array_merge($this->viewReturnArgs(), [
+            'detit_completed' => $result['completed'],
+            'detit_failed' => $result['failed'],
+            'detit_selected' => 1,
+        ]));
+    }
+
+    /**
+     * Pure input validation shared by the action and its WP-CLI tests.
+     *
+     * @return array<int, int>|\WP_Error
+     */
+    public static function parseSelectedIds(mixed $raw): array|\WP_Error
+    {
+        if (! is_array($raw) || $raw === []) {
+            return new \WP_Error(
+                'detit_selected_missing',
+                'Select at least one product to scan.'
+            );
+        }
+
+        if (count($raw) > BatchCatalogAuditor::MAX_BATCH_SIZE) {
+            return new \WP_Error(
+                'detit_selected_too_many',
+                'Select no more than 25 products per scan.'
+            );
+        }
+
+        $ids = [];
+        foreach ($raw as $value) {
+            if (! is_string($value) && ! is_int($value)) {
+                return new \WP_Error('detit_selected_invalid', 'Invalid product selection.');
+            }
+
+            $text = (string) $value;
+            if (preg_match('/^[1-9][0-9]*$/D', $text) !== 1) {
+                return new \WP_Error('detit_selected_invalid', 'Invalid product selection.');
+            }
+
+            $id = filter_var($text, FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 1],
+            ]);
+            if ($id === false) {
+                return new \WP_Error('detit_selected_invalid', 'Invalid product selection.');
+            }
+
+            $ids[(int) $id] = (int) $id;
+        }
+
+        return array_values($ids);
     }
 
     public function scanProduct(): void
@@ -197,23 +280,45 @@ final class ContentHealthPage
                     <?php endif; ?>
                 </form>
 
+                <form id="detit-selected-scan" method="post"
+                    action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                    style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:16px 0;">
+                    <input type="hidden" name="action" value="detit_health_scan_selected">
+                    <?php $this->renderViewFields($data); ?>
+                    <?php wp_nonce_field('detit_health_scan_selected'); ?>
+                    <button type="submit" class="button button-primary">
+                        <?php esc_html_e('Scan selected products', self::TD); ?>
+                    </button>
+                    <span id="detit-selection-count" class="description" aria-live="polite">
+                        <?php esc_html_e('Select products from this page using the checkboxes below (up to 20).', self::TD); ?>
+                    </span>
+                </form>
+
                 <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:16px 0;">
-                    <?php $this->batchForm(0, __('Scan first 10 products', self::TD), $data); ?>
+                    <?php $this->batchForm(0, __('Auto-scan: first 10 by ID', self::TD), $data); ?>
                     <?php
                     $more = isset($_GET['detit_more']) && absint($_GET['detit_more']) === 1;
                     $next = isset($_GET['detit_next']) ? absint($_GET['detit_next']) : 0;
                     if ($more && $next > 0) {
-                        $this->batchForm($next, __('Continue: next 10', self::TD), $data);
+                        $this->batchForm($next, __('Auto-scan: next 10 by ID', self::TD), $data);
                     }
                     ?>
                     <span class="description"><?php esc_html_e(
-                        'Each click scans at most 10 products; updates only DetIt audit records.',
+                        'Auto-scan follows product ID order, independent of the search and sort above. Use checkboxes to choose specific products.',
                         self::TD
                     ); ?></span>
                 </div>
 
                 <table class="wp-list-table widefat fixed striped">
                     <thead><tr>
+                        <th scope="col" style="width:44px;">
+                            <label class="screen-reader-text" for="detit-select-all">
+                                <?php esc_html_e('Select all products on this page', self::TD); ?>
+                            </label>
+                            <input type="checkbox" id="detit-select-all"
+                                title="<?php esc_attr_e('Select all products on this page', self::TD); ?>"
+                                aria-label="<?php esc_attr_e('Select all products on this page', self::TD); ?>">
+                        </th>
                         <th scope="col"><?php esc_html_e('Product', self::TD); ?></th>
                         <th scope="col"><?php esc_html_e('Score', self::TD); ?></th>
                         <th scope="col"><?php esc_html_e('Audit status', self::TD); ?></th>
@@ -223,10 +328,26 @@ final class ContentHealthPage
                     </tr></thead>
                     <tbody>
                     <?php if ($data['products'] === []) : ?>
-                        <tr><td colspan="6"><?php esc_html_e('No matching accessible products.', self::TD); ?></td></tr>
+                        <tr><td colspan="7"><?php esc_html_e('No matching accessible products.', self::TD); ?></td></tr>
                     <?php else : ?>
                         <?php foreach ($data['products'] as $product) : ?>
                             <tr>
+                                <td>
+                                    <label class="screen-reader-text"
+                                        for="detit-select-<?php echo (int) $product['product_id']; ?>">
+                                        <?php
+                                        printf(
+                                            esc_html__('Select product %d for audit', self::TD),
+                                            (int) $product['product_id']
+                                        );
+                                        ?>
+                                    </label>
+                                    <input type="checkbox" class="detit-select-product"
+                                        id="detit-select-<?php echo (int) $product['product_id']; ?>"
+                                        name="product_ids[]"
+                                        value="<?php echo (int) $product['product_id']; ?>"
+                                        form="detit-selected-scan">
+                                </td>
                                 <td>
                                     <?php
                                     $edit = get_edit_post_link($product['product_id'], '');
@@ -301,6 +422,53 @@ final class ContentHealthPage
                     <?php endif; ?>
                     </tbody>
                 </table>
+                <script>
+                (function () {
+                    var master = document.getElementById('detit-select-all');
+                    var form = document.getElementById('detit-selected-scan');
+                    if (!master || !form) {
+                        return;
+                    }
+
+                    var boxes = Array.prototype.slice.call(
+                        document.querySelectorAll('.detit-select-product')
+                    );
+                    var count = document.getElementById('detit-selection-count');
+
+                    function updateSelection() {
+                        var selected = boxes.filter(function (box) {
+                            return box.checked;
+                        }).length;
+                        master.checked = boxes.length > 0 && selected === boxes.length;
+                        master.indeterminate = selected > 0 && selected < boxes.length;
+
+                        if (count) {
+                            count.textContent = selected + ' of ' + boxes.length
+                                + ' products selected on this page';
+                        }
+                    }
+
+                    master.addEventListener('change', function () {
+                        boxes.forEach(function (box) {
+                            box.checked = master.checked;
+                        });
+                        updateSelection();
+                    });
+
+                    boxes.forEach(function (box) {
+                        box.addEventListener('change', updateSelection);
+                    });
+
+                    form.addEventListener('submit', function (event) {
+                        if (!boxes.some(function (box) { return box.checked; })) {
+                            event.preventDefault();
+                            window.alert('Select at least one product to scan.');
+                        }
+                    });
+
+                    updateSelection();
+                }());
+                </script>
 
                 <p>
                     <?php
@@ -405,8 +573,19 @@ final class ContentHealthPage
     private function renderNotice(): void
     {
         if (isset($_GET['detit_error'])) {
+            $errorCode = is_string($_GET['detit_error'])
+                ? sanitize_key(wp_unslash($_GET['detit_error']))
+                : '';
+            $messages = [
+                'detit_selected_missing' => __('Select at least one product to scan.', self::TD),
+                'detit_selected_invalid' => __('Invalid product selection; choose products using the checkboxes.', self::TD),
+                'detit_selected_too_many' => __('Select no more than 25 products per scan.', self::TD),
+            ];
             echo '<div class="notice notice-error"><p>';
-            esc_html_e('Audit failed. Check permissions and your database connection.', self::TD);
+            echo esc_html(
+                $messages[$errorCode]
+                    ?? __('Audit failed. Check permissions and your database connection.', self::TD)
+            );
             echo '</p></div>';
             return;
         }
