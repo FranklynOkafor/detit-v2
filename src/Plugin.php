@@ -8,6 +8,7 @@ use DetIt\Abilities\ProductIssuesAbility;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
 use DetIt\Admin\ProductGenerateMetaBox;
+use DetIt\Admin\ContentHealthPage;
 
 use DetIt\REST\GenerateController;
 use DetIt\REST\ApplyController;
@@ -47,6 +48,7 @@ class Plugin
 	private function bootAdmin(): void
 	{
 		(new Menu())->registerHooks();
+		(new ContentHealthPage())->registerHooks();
 		if (is_admin()) {
 			(new BrandProfileSettingsPage())->register();
 		}
