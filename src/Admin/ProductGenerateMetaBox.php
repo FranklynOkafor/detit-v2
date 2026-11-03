@@ -169,6 +169,22 @@ final class ProductGenerateMetaBox
         $imageInputSupported = (
             new WordPressAIClientGateway()
         )->supportsImageInput();
+
+        // Language and tone belong to the merchant's saved store profile.
+        // The modal starts with these preferences but allows a per-product
+        // edit without modifying the permanent Brand Profile option.
+        $brandProfile = get_option('detit_brand_profile', []);
+        $brandProfile = is_array($brandProfile) ? $brandProfile : [];
+
+        $savedLanguage = isset($brandProfile['language_variant'])
+            && is_scalar($brandProfile['language_variant'])
+            ? sanitize_text_field((string) $brandProfile['language_variant'])
+            : '';
+
+        $savedTone = isset($brandProfile['tone'])
+            && is_scalar($brandProfile['tone'])
+            ? sanitize_text_field((string) $brandProfile['tone'])
+            : '';
 ?>
         <div class="detit-generate-panel">
 
@@ -471,6 +487,7 @@ final class ProductGenerateMetaBox
                             <input
                                 type="text"
                                 id="detit-language"
+                                value="<?php echo esc_attr($savedLanguage); ?>"
                                 placeholder="<?php
                                                 echo esc_attr__(
                                                     'e.g. English (Nigeria)',
@@ -494,12 +511,20 @@ final class ProductGenerateMetaBox
                             <input
                                 type="text"
                                 id="detit-tone"
+                                value="<?php echo esc_attr($savedTone); ?>"
                                 placeholder="<?php
                                                 echo esc_attr__(
                                                     'e.g. Professional',
                                                     'detit-product-content-generator-for-woocommerce'
                                                 );
                                                 ?>">
+
+                            <p class="description">
+                                <?php esc_html_e(
+                                    'Language and tone are prefilled from your saved DetIt Brand Profile. You can change them for this generation without changing your store settings.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                ); ?>
+                            </p>
 
                         </div>
 
