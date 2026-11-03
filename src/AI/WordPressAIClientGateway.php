@@ -41,8 +41,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                 ->with_text(
                     'Describe the product shown in this image.'
                 )
-                ->with_file($image)
-;
+                ->with_file($image);
 
             return $builder->is_supported_for_text_generation();
         } catch (\Throwable $throwable) {
