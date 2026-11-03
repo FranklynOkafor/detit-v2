@@ -42,9 +42,7 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
                     'Describe the product shown in this image.'
                 )
                 ->with_file($image)
-                ->using_model_preference(
-                    'gemini-3.5-flash'
-                );
+;
 
             return $builder->is_supported_for_text_generation();
         } catch (\Throwable $throwable) {
@@ -72,9 +70,9 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
             $builder = wp_ai_client_prompt(
                 $request->prompt()
             );
-            $builder = $builder->using_model_preference(
-                'gemini-3.5-flash'
-            );
+            // Let the WordPress AI Client select a compatible model from
+            // the providers configured by the site owner. DetIt Free must
+            // not require a hard-coded Gemini model to generate content.
 
 
 
