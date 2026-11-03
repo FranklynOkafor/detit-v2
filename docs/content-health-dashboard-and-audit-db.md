@@ -115,6 +115,30 @@ The migration does not delete prior `issue_flags`, scores, timestamps or hashes.
 fail to apply `dbDelta` schema updates. The smoke script inspects the real
 table column; if it fails, do not mark Stage 63 accepted.
 
+## Generation modal: respect the saved Brand Profile
+
+The per-product **Generate with DetIt** modal now prefills its **Language**
+and **Tone** inputs using the merchant's existing
+`detit_brand_profile.language_variant` and `detit_brand_profile.tone`
+settings. Those values remain editable for one generation, but edits made
+in the modal **never save back to the store profile**.
+
+This is a UI prefill only. The existing Generate REST endpoint, prompt
+builder, security checks, preview, apply and undo workflows remain
+unchanged. If a merchant has not configured a language in their Brand
+Profile, the input remains empty and the existing generation validation
+still asks them to enter one.
+
+Test from WordPress `app/public`:
+
+```text
+wp eval-file wp-content/plugins/detit/tools/brand-profile-generator-defaults-smoke.php
+```
+
+This test is read-only and checks actual saved values, rendered defaults,
+editable inputs and preservation of the profile option. Also verify the
+modal manually with a disposable product before accepting the PR.
+
 ## LocalWP acceptance
 
 1. In the DetIt plugin folder, ensure `git status` is clean; switch to
