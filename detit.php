@@ -2,14 +2,15 @@
 
 /**
  * Plugin Name: DetIt AI Content Generator for WooCommerce
- * Plugin URI: https://github.com/Franklyn-Okafor/DetIt
- * Description: Generate SEO-optimized WooCommerce product titles, descriptions, tags, and metadata with AI.
+ * Plugin URI: https://github.com/FranklynOkafor/detit-v2
+ * Description: Generate and review WooCommerce product content with AI, and audit product content completeness.
  * Version: 2.0.0
  * Requires at least: 6.5
  * Requires PHP: 8.1
  * Requires Plugins: woocommerce
  * Author: Franklyn Okafor
  * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: detit-product-content-generator-for-woocommerce
  * Domain Path: /languages
  */
@@ -36,7 +37,35 @@ define('DETIT_URL', plugin_dir_url(__FILE__));
 |--------------------------------------------------------------------------
 */
 
-require_once DETIT_PATH . 'vendor/autoload.php';
+/*
+ * DetIt has no third-party Composer packages at runtime. Developers may
+ * use Composer locally, but merchants must not need Composer to activate
+ * the published WordPress.org ZIP.
+ *
+ * Prefer Composer's PSR-4 loader when available in the development checkout.
+ * Otherwise, load only DetIt's own namespaced classes from src/.
+ */
+$detitAutoload = DETIT_PATH . 'vendor/autoload.php';
+
+if (is_readable($detitAutoload)) {
+    require_once $detitAutoload;
+} else {
+    spl_autoload_register(static function (string $class): void {
+        $prefix = 'DetIt\\';
+
+        if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+            return;
+        }
+
+        $relativeClass = substr($class, strlen($prefix));
+        $file = DETIT_PATH . 'src/'
+            . str_replace('\\', '/', $relativeClass) . '.php';
+
+        if (is_readable($file)) {
+            require_once $file;
+        }
+    });
+}
 
 use DetIt\Activator;
 use DetIt\Deactivator;
