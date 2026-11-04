@@ -72,6 +72,10 @@ try {
     # entries (e.g. plugin\assets\) to a ZIP. WordPress's ZIP extractor
     # expects forward-slash ZIP entry names instead. Build file entries
     # explicitly, with / separators, and omit empty directory entries.
+    # Windows PowerShell 5.1 does not automatically load the assembly
+    # containing ZipArchiveMode / CompressionLevel. Both assemblies are
+    # required to support PS 5.1 and PowerShell 7 consistently.
+    Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [System.IO.Compression.ZipFile]::Open(
         $archivePath,
