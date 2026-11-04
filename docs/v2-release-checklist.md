@@ -53,6 +53,16 @@ wp eval-file wp-content/plugins/detit/tools/stage62-selected-scan-smoke.php
 
 Each should report `RESULT: PASS` where applicable. Stage-specific scripts may assume a particular disposable product exists; investigate before interpreting an incomplete result as a code failure.
 
+**If generation returns HTTP 429 (rate limiting):** Before replacing API keys, check the Google AI Studio project selected in the key's project, and its model-level RPM/TPM/RPD limits. AI Client automatic selection can choose a model with no free quota even when other models in the project have capacity.
+
+A minimal diagnostic is available on the release branch:
+
+```text
+wp eval-file wp-content/plugins/detit/tools/release-ai-provider-smoke.php
+```
+
+**Warning:** This diagnostic makes exactly one real, small text-generation request. It may consume provider quota or incur provider fees. It uses a non-binding preference for `gemini-2.5-flash-lite` and prints only success/selected provider+model, or sanitized error code and HTTP status. It intentionally does not print raw error details, API keys or credentials. If the provider smoke fails, troubleshoot the AI Client/provider separately before attributing the failure to the DetIt generation controller.
+
 **Step 4: manual regression on a disposable product (never a live paid order/product).**
 
 - [ ] Saved Language and Tone appear in modal; can override without changing Brand Profile.
