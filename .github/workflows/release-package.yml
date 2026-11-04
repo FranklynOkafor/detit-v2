@@ -44,6 +44,24 @@ jobs:
               $_.FullName -notlike 'detit-product-content-generator-for-woocommerce/*'
             })
             if ($bad.Count -gt 0) { throw 'Files exist outside the single plugin directory.' }
+
+            # Regression for actual LocalWP install failure:
+            # WordPress could not copy a backslash directory ZIP entry.
+            $windowsPaths = @($archive.Entries | Where-Object { $_.FullName.Contains('\') })
+            if ($windowsPaths.Count -gt 0) {
+              throw 'ZIP has backslash entry names; WordPress cannot extract this reliably.'
+            }
+
+            $directoryEntries = @($archive.Entries | Where-Object { $_.FullName.EndsWith('/') })
+            if ($directoryEntries.Count -gt 0) {
+              throw 'ZIP contains unnecessary directory-only entries.'
+            }
+
+            $entryNames = @($archive.Entries | ForEach-Object { $_.FullName })
+            if ($entryNames -notcontains 'detit-product-content-generator-for-woocommerce/assets/js/product-generate.js') {
+              throw 'Release ZIP is missing its generator JavaScript.'
+            }
           }
           finally { $archive.Dispose() }
           Write-Host 'ARCHIVE_ROOT_STRUCTURE: PASS'
+          Write-Host 'WORDPRESS_ZIP_ENTRY_COMPATIBILITY: PASS'
