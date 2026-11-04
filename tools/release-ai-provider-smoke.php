@@ -8,6 +8,8 @@
  *
  * IMPORTANT: Makes ONE real, very small text-generation request to the
  * merchant-configured provider, and may consume quota/incur provider fees.
+ * Gemini 2.5 access is restricted for newer Google projects; request a
+ * current 3.x model preference, with WordPress AI Client fallback allowed.
  * Never prints API keys, credentials, or raw provider error messages.
  */
 
@@ -24,10 +26,10 @@ echo "AI_CLIENT_AVAILABLE: PASS\n";
 
 try {
     $builder = wp_ai_client_prompt('Reply with only the word OK.')
-        ->using_model_preference('gemini-2.5-flash-lite')
+        ->using_model_preference('gemini-3.5-flash-lite')
         ->using_max_tokens(32);
 
-    echo "MODEL_PREFERENCE: gemini-2.5-flash-lite (preference only)\n";
+    echo "MODEL_PREFERENCE: gemini-3.5-flash-lite (preference only)\n";
 
     if (! $builder->is_supported_for_text_generation()) {
         echo "TEXT_GENERATION_SUPPORTED: FAIL\n";
