@@ -27,6 +27,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check product generator JavaScript syntax
+        run: node --check assets/js/product-generate.js
       - name: Create and verify WordPress release ZIP
         shell: pwsh
         run: ./tools/build-release.ps1
