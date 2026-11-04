@@ -54,6 +54,13 @@ final class PromptBuilder
 			$this->buildTemplateLayer($template),
 			$this->buildProductFactsLayer($productFactSheet),
 
+            // Release quality: detailed, fact-aware writing standards are
+            // only applied to the fields that the merchant selected.
+            (new ContentQualityPolicy())->instructions(
+                $productFactSheet,
+                $selectedFields
+            ),
+
 			$this->buildTagRulesLayer(
 				$selectedFields
 			),
@@ -84,7 +91,22 @@ final class PromptBuilder
 			);
 		}
 
-		return new GenerationRequest($prompt);
+        // Without a token budget, some providers return a very short
+        // description even when the prompt requests substantial copy.
+        // One 2,800-token budget is enough for typical 200–350-word
+        // content plus the required JSON, without depending on a model
+        // vendor's default generation length.
+        $maxTokens = in_array(
+            OutputSchema::FIELD_DESCRIPTION,
+            $selectedFields,
+            true
+        ) ? 2800 : 1000;
+
+        return new GenerationRequest(
+            $prompt,
+            null,
+            $maxTokens
+        );
 	}
 
 	/**
