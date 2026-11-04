@@ -153,12 +153,16 @@ final class GenerationResponseHandler
                 . implode("\n", $qualityIssues) . "\n"
             : '';
 
+        $failureContext = $qualityIssues !== []
+            ? 'did not meet the product-copy quality requirements.'
+            : 'was not valid structured output.';
+
         $repairPrompt =
             $originalRequest->prompt()
             . "\n\n"
             . "----- DETIT RESPONSE REPAIR -----\n"
             . "Your previous response could not be accepted because it "
-            . "was not valid structured output.\n\n"
+            . $failureContext . "\n\n"
             . "Return the requested content again as ONE valid JSON object.\n"
             . "Use exactly these top-level fields: {$fieldList}.\n"
             . "Do not add Markdown code fences.\n"
@@ -166,7 +170,7 @@ final class GenerationResponseHandler
             . "Do not invent new product facts.\n"
             . "All original fact-safety and content rules still apply.\n"
             . $qualityGuidance . "\n"
-            . "Previous invalid response:\n"
+            . "Previous response:\n"
             . "<invalid_output>\n"
             . $invalidResponse
             . "\n</invalid_output>";
