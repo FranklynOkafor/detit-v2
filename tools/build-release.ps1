@@ -131,12 +131,19 @@ try {
             throw 'ZIP contains directory-only entries.'
         }
 
-        if (@($names | Where-Object {
-            -not $_.StartsWith("$slug/", [System.StringComparison]::Ordinal)
-            -or $_.Contains('../')
-            -or $_.StartsWith('/')
-        }).Count -gt 0) {
-            throw 'ZIP has an invalid archive path.'
+        # Windows PowerShell 5.1 can interpret a leading -or on the
+        # next line as a command, so evaluate each condition explicitly.
+        foreach ($name in $names) {
+            $outsidePlugin = -not $name.StartsWith(
+                "$slug/",
+                [System.StringComparison]::Ordinal
+            )
+            $parentTraversal = $name.Contains('../')
+            $absolutePath = $name.StartsWith('/')
+
+            if ($outsidePlugin -or $parentTraversal -or $absolutePath) {
+                throw "ZIP has an invalid archive path: $name"
+            }
         }
 
         foreach ($required in @(
