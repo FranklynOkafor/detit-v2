@@ -68,13 +68,72 @@ try {
         Remove-Item -LiteralPath $archivePath -Force
     }
 
-    Compress-Archive -LiteralPath $package -DestinationPath $archivePath -CompressionLevel Optimal
-
+    # PowerShell Compress-Archive may write Windows backslash directory
+    # entries (e.g. plugin\assets\) to a ZIP. WordPress's ZIP extractor
+    # expects forward-slash ZIP entry names instead. Build file entries
+    # explicitly, with / separators, and omit empty directory entries.
     Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::Open(
+        $archivePath,
+        [System.IO.Compression.ZipArchiveMode]::Create
+    )
+
+    try {
+        $files = @(Get-ChildItem -LiteralPath $package -Recurse -File)
+
+        if ($files.Count -eq 0) {
+            throw 'No plugin files were found to package.'
+        }
+
+        foreach ($file in $files) {
+            $relativePath = $file.FullName.Substring($package.Length + 1)
+            $entryName = "$slug/" + $relativePath.Replace('\', '/')
+            $entry = $zip.CreateEntry(
+                $entryName,
+                [System.IO.Compression.CompressionLevel]::Optimal
+            )
+
+            $sourceStream = [System.IO.File]::OpenRead($file.FullName)
+            try {
+                $destinationStream = $entry.Open()
+                try {
+                    $sourceStream.CopyTo($destinationStream)
+                }
+                finally {
+                    $destinationStream.Dispose()
+                }
+            }
+            finally {
+                $sourceStream.Dispose()
+            }
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+
+    # Validate RAW ZIP entry names. Do not normalise backslashes first:
+    # that would conceal precisely the issue that broke WordPress installs.
     $zip = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
 
     try {
-        $names = @($zip.Entries | ForEach-Object { $_.FullName -replace '\\', '/' })
+        $names = @($zip.Entries | ForEach-Object { $_.FullName })
+
+        if (@($names | Where-Object { $_.Contains('\') }).Count -gt 0) {
+            throw 'ZIP contains Windows backslashes in entry names.'
+        }
+
+        if (@($names | Where-Object { $_.EndsWith('/') }).Count -gt 0) {
+            throw 'ZIP contains directory-only entries.'
+        }
+
+        if (@($names | Where-Object {
+            -not $_.StartsWith("$slug/", [System.StringComparison]::Ordinal)
+            -or $_.Contains('../')
+            -or $_.StartsWith('/')
+        }).Count -gt 0) {
+            throw 'ZIP has an invalid archive path.'
+        }
 
         foreach ($required in @(
             "$slug/detit.php",
@@ -108,6 +167,7 @@ try {
         throw 'Release ZIP is over WordPress.org recommended 10 MB submission limit.'
     }
 
+    Write-Host 'RELEASE_ZIP_PATHS: PASS (forward slashes, file entries only)'
     Write-Host 'RELEASE_PACKAGE_CONTENTS: PASS'
     Write-Host 'RELEASE_VERSION_MATCH: PASS'
     Write-Host 'RELEASE_DEVELOPER_FILES_EXCLUDED: PASS'
