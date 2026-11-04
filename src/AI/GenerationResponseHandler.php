@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace DetIt\AI;
 
+use DetIt\Domain\ProductFactSheet;
+
 final class GenerationResponseHandler
 {
     private AIClientGatewayInterface $gateway;
@@ -19,7 +21,8 @@ final class GenerationResponseHandler
 
     public function handle(
         GenerationRequest $request,
-        array $expectedFields
+        array $expectedFields,
+        ?ProductFactSheet $productFacts = null
     ): GenerationOutcome {
         if ($expectedFields === []) {
             throw new \InvalidArgumentException(
@@ -42,20 +45,34 @@ final class GenerationResponseHandler
             );
         }
 
+        $qualityIssues = [];
+
         try {
             $result = $this->parser->parse(
                 (string) $initialResponse->text(),
                 $expectedFields
             );
 
-            return GenerationOutcome::success(
-                $result,
-                $initialResponse->providerId(),
-                $initialResponse->modelId()
-            );
+            if ($productFacts !== null) {
+                $qualityIssues = (new ContentQualityPolicy())->issues(
+                    $result,
+                    $productFacts,
+                    $expectedFields
+                );
+            }
+
+            if ($qualityIssues === []) {
+                return GenerationOutcome::success(
+                    $result,
+                    $initialResponse->providerId(),
+                    $initialResponse->modelId()
+                );
+            }
+            // A well-formed JSON response can still be unhelpfully short.
+            // Give the model one opportunity to improve it using facts.
         } catch (\InvalidArgumentException $exception) {
-            // Invalid structured output.
-            // Continue to the single permitted repair attempt.
+            // Invalid structured output; preserve the existing one-repair
+            // limit rather than repeatedly spending provider credits.
         }
 
         /*
@@ -65,7 +82,8 @@ final class GenerationResponseHandler
         $repairRequest = $this->buildRepairRequest(
             $request,
             (string) $initialResponse->text(),
-            $expectedFields
+            $expectedFields,
+            $qualityIssues
         );
 
         $repairResponse = $this->gateway->generate(
@@ -92,6 +110,21 @@ final class GenerationResponseHandler
                 $expectedFields
             );
 
+            if ($productFacts !== null) {
+                $remainingIssues = (new ContentQualityPolicy())->issues(
+                    $result,
+                    $productFacts,
+                    $expectedFields
+                );
+
+                if ($remainingIssues !== []) {
+                    return GenerationOutcome::failure(
+                        AIErrorCode::INVALID_AI_RESPONSE->value,
+                        'The AI could not produce sufficiently useful product copy using the available facts. Add verified product details or try again.'
+                    );
+                }
+            }
+
             return GenerationOutcome::success(
                 $result,
                 $repairResponse->providerId(),
@@ -108,9 +141,17 @@ final class GenerationResponseHandler
     private function buildRepairRequest(
         GenerationRequest $originalRequest,
         string $invalidResponse,
-        array $expectedFields
+        array $expectedFields,
+        array $qualityIssues = []
     ): GenerationRequest {
         $fieldList = implode(', ', $expectedFields);
+
+        // These messages come only from DetIt's own quality checks, never
+        // directly from external product data or returned model text.
+        $qualityGuidance = $qualityIssues !== []
+            ? "The previous output was valid JSON but did not meet these copy-quality requirements:\n"
+                . implode("\n", $qualityIssues) . "\n"
+            : '';
 
         $repairPrompt =
             $originalRequest->prompt()
@@ -123,7 +164,8 @@ final class GenerationResponseHandler
             . "Do not add Markdown code fences.\n"
             . "Do not add explanations before or after the JSON.\n"
             . "Do not invent new product facts.\n"
-            . "All original fact-safety and content rules still apply.\n\n"
+            . "All original fact-safety and content rules still apply.\n"
+            . $qualityGuidance . "\n"
             . "Previous invalid response:\n"
             . "<invalid_output>\n"
             . $invalidResponse
