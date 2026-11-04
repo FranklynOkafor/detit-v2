@@ -63,6 +63,16 @@ wp eval-file wp-content/plugins/detit/tools/release-ai-provider-smoke.php
 
 **Warning:** This diagnostic makes exactly one real, small text-generation request. It may consume provider quota or incur provider fees. It uses a non-binding preference for `gemini-3.5-flash-lite` and prints only success/selected provider+model, or sanitized error code and HTTP status. It intentionally does not print raw error details, API keys or credentials. If the provider smoke fails, troubleshoot the AI Client/provider separately before attributing the failure to the DetIt generation controller.
 
+**If the independent provider smoke passes but DetIt's Generate button still returns a 429:** DetIt's AI gateway must use the same compatible model preference as the working provider diagnostic. As of this release candidate, it prefers `gemini-3.5-flash-lite` and relies on the WordPress AI Client to fall back to other compatible site-configured models if that preference is unavailable.
+
+Verify the **actual DetIt gateway** (not just the generic AI Client) with:
+
+```text
+wp eval-file wp-content/plugins/detit/tools/release-detit-gateway-smoke.php
+```
+
+This is one **real billable/quota-consuming AI request**. It does not change product data and prints the selected provider/model on success. A `RESULT: PASS` means the DetIt gateway works for a small request; it does **not** guarantee the larger real product prompt has enough token quota or that the Generate → Preview workflow succeeds.
+
 **Step 4: manual regression on a disposable product (never a live paid order/product).**
 
 - [ ] Saved Language and Tone appear in modal; can override without changing Brand Profile.
