@@ -73,6 +73,16 @@ wp eval-file wp-content/plugins/detit/tools/release-detit-gateway-smoke.php
 
 This is one **real billable/quota-consuming AI request**. It does not change product data and prints the selected provider/model on success. A `RESULT: PASS` means the DetIt gateway works for a small request; it does **not** guarantee the larger real product prompt has enough token quota or that the Generate → Preview workflow succeeds.
 
+**Step 3b: verify market-ready writing quality.** DetIt now asks for SEO-aware copy, gives longer output budget, and may perform one extra repair request for a clearly inadequate result on a product with detailed facts.
+
+First run the read-only, no-AI test:
+
+```text
+wp eval-file wp-content/plugins/detit/tools/release-content-quality-smoke.php
+```
+
+Then test on a disposable product with **real, verified descriptions and attributes**. Select the full description and short description. Confirm the generated copy contains relevant sections, meaningful details, natural search terms and no fabricated claims. Verify that Preview, Apply and Undo still work. If facts are sparse, supply genuine missing attributes rather than insisting on an arbitrary word count. See `docs/release-content-quality.md`. The SEO meta description is still **preview only**: V2 does not yet save metadata in Yoast/Rank Math.
+
 **Step 4: manual regression on a disposable product (never a live paid order/product).**
 
 - [ ] Saved Language and Tone appear in modal; can override without changing Brand Profile.
