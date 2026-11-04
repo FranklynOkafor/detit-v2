@@ -610,9 +610,75 @@ document.addEventListener('DOMContentLoaded', function () {
      * ---------------------------------------------------------
      */
 
+    /*
+     * Rich product descriptions can contain safe WooCommerce HTML.
+     * Rebuild an allowlisted preview using DOM nodes; never use
+     * innerHTML with AI-generated or stored product content.
+     *
+     * This preserves paragraphs, headings and lists while removing
+     * scripts, event handlers, links and all HTML attributes.
+     */
+    function appendSafeDescriptionPreview(target, value) {
+        const source = new DOMParser().parseFromString(
+            String(value),
+            'text/html'
+        );
+
+        const allowed = new Set([
+            'p', 'h2', 'h3', 'ul', 'ol', 'li',
+            'strong', 'em', 'br',
+        ]);
+
+        const skipEntirely = new Set([
+            'script', 'style', 'iframe', 'object',
+            'embed', 'svg', 'form', 'input',
+        ]);
+
+        function makeSafeNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return document.createTextNode(
+                    node.textContent || ''
+                );
+            }
+
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                return null;
+            }
+
+            const tag = node.nodeName.toLowerCase();
+
+            if (skipEntirely.has(tag)) {
+                return null;
+            }
+
+            const safe = document.createElement(
+                allowed.has(tag) ? tag : 'span'
+            );
+
+            Array.from(node.childNodes).forEach(function (child) {
+                const cleanChild = makeSafeNode(child);
+
+                if (cleanChild) {
+                    safe.appendChild(cleanChild);
+                }
+            });
+
+            return safe;
+        }
+
+        Array.from(source.body.childNodes).forEach(function (node) {
+            const safeNode = makeSafeNode(node);
+
+            if (safeNode) {
+                target.appendChild(safeNode);
+            }
+        });
+    }
+
     function createPreviewColumn(
         labelText,
-        value
+        value,
+        field
     ) {
         const column =
             document.createElement('div');
@@ -638,10 +704,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const normalized =
             normalizePreviewValue(value);
 
-        content.textContent =
-            normalized.trim()
-                ? normalized
-                : 'Not set';
+        if (! normalized.trim()) {
+            content.textContent = 'Not set';
+        } else if (
+            field === 'description'
+            || field === 'short_description'
+        ) {
+            appendSafeDescriptionPreview(content, value);
+        } else {
+            content.textContent = normalized;
+        }
 
         column.append(
             label,
@@ -749,12 +821,14 @@ document.addEventListener('DOMContentLoaded', function () {
         comparison.append(
             createPreviewColumn(
                 'Existing',
-                existingValue
+                existingValue,
+                field
             ),
 
             createPreviewColumn(
                 'Generated',
-                generatedValue
+                generatedValue,
+                field
             )
         );
 
