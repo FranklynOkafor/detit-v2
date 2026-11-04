@@ -103,6 +103,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-release.ps1
 
 The command must end with `RESULT: PASS`. It creates `dist/detit-2.0.0.zip` (one plugin directory inside). It excludes `tools/`, Git data, docs, `vendor/`, and Composer files by design. Do **not** ZIP the entire GitHub source folder.
 
+**Windows ZIP compatibility note (2026-11-04):** The earlier PowerShell builder could create Windows-style ZIP directory entries containing backslashes. A clean LocalWP WordPress installation then failed while copying `detit-product-content-generator-for-woocommerce\\assets\\`. The updated builder now creates each ZIP file entry explicitly using forward-slash paths, omits directory-only entries, and rejects any backslash paths during validation. **Always rebuild the ZIP after pulling this fix**; reuploading the old `dist/detit-2.0.0.zip` will repeat the failure.
+
 **Step 6: clean-install test using the generated ZIP, on a separate disposable WordPress installation.**
 
 - [ ] Back up the test database and files first.
