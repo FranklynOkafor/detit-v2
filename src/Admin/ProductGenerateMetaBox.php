@@ -363,7 +363,7 @@ final class ProductGenerateMetaBox
                                     checked>
                                 <?php
                                 esc_html_e(
-                                    'Meta description',
+                                    'SEO meta description (preview only)',
                                     'detit-product-content-generator-for-woocommerce'
                                 );
                                 ?>
@@ -548,6 +548,13 @@ final class ProductGenerateMetaBox
                                                     'detit-product-content-generator-for-woocommerce'
                                                 );
                                                 ?>"></textarea>
+
+                            <p class="description">
+                                <?php esc_html_e(
+                                    'For stronger, search-friendly descriptions, add verified product specifications, materials, size or use details to the product record or here. DetIt will not invent facts just to make text longer.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                ); ?>
+                            </p>
 
                         </div>
 
