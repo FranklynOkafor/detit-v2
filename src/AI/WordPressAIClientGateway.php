@@ -68,10 +68,18 @@ final class WordPressAIClientGateway implements AIClientGatewayInterface
         try {
             $builder = wp_ai_client_prompt(
                 $request->prompt()
+            )->using_model_preference(
+                'gemini-3.5-flash-lite'
             );
-            // Let the WordPress AI Client select a compatible model from
-            // the providers configured by the site owner. DetIt Free must
-            // not require a hard-coded Gemini model to generate content.
+
+            /*
+             * Prefer the model verified by the release AI provider smoke
+             * test. This is NOT a forced model: the WordPress AI Client
+             * falls back to another compatible configured provider/model
+             * if this preference is unavailable. Without a preference,
+             * automatic discovery may select an older model which
+             * advertises text support but has no usable API quota.
+             */
 
 
 
