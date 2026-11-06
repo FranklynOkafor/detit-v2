@@ -70,8 +70,7 @@ final class ProductSummaryAbility
                     'detit-product-content-generator-for-woocommerce'
                 ),
                 'description' => __(
-                    'Return a read-only summary of a WooCommerce product. '
-                    . 'Requires permission to manage WooCommerce and edit the product.',
+                    'Return a read-only summary of a WooCommerce product. Requires permission to manage WooCommerce and edit the product.',
                     'detit-product-content-generator-for-woocommerce'
                 ),
                 'category' => self::CATEGORY,
