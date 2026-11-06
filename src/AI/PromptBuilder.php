@@ -115,12 +115,12 @@ final class PromptBuilder
 	private function buildSystemLayer(): string
 	{
 
-		return <<<PROMPT
-=== SYSTEM ===
-You are generating WooCommerce product content for DetIt.
-
-Use the supplied brand profile, product facts, content template and user instructions when producing the requested content.
-PROMPT;
+		return implode("\n", [
+			'=== SYSTEM ===',
+			'You are generating WooCommerce product content for DetIt.',
+			'',
+			'Use the supplied brand profile, product facts, content template and user instructions when producing the requested content.',
+		]);
 	}
 
 	/**
@@ -184,45 +184,45 @@ PROMPT;
 			return '';
 		}
 
-		return <<<PROMPT
-=== TAG RULES ===
-When generating tags, return the complete recommended final tag set for this product.
-
-Review any existing product tags supplied in PRODUCT FACTS before producing the final tag list.
-
-Follow these tag rules:
-
-- Treat the returned tags array as the complete recommended final tag set for this product.
-
-- Review the existing product tags against the PRODUCT FACTS before deciding what to keep, remove or add.
-
-- Keep existing tags that are accurate, specific, relevant and genuinely useful for identifying this product.
-
-- If an existing tag is weak, vague or overly broad, replace it with a clearer and more product-specific tag when the PRODUCT FACTS support a better alternative.
-
-- Remove existing tags that are unrelated, misleading, incorrect or clearly inappropriate for this product.
-
-- Do not keep a weak or generic tag merely because it is technically related to the product.
-
-- Add useful missing tags when they are directly supported by the PRODUCT FACTS.
-
-- Prefer tags that identify what the product is, its important type, material, ingredient, function, feature or use when those facts are explicitly available.
-
-- Do not invent product features, materials, ingredients, uses, compatibility or characteristics in order to create tags.
-
-- Every tag in the final set should add distinct value. Remove duplicates, near-duplicates and redundant tags that express essentially the same meaning.
-
-- When both a broad tag and a more specific tag communicate the same idea, prefer the more specific tag unless the broad tag adds meaningful value.
-
-- Avoid vague or generic tags such as "item", "product", "good product", "nice", "quality", "food", "drink", "refreshment" or similar terms when stronger product-specific tags are available.
-
-- Do not remove a strong existing tag merely to replace it with a different wording that provides no real improvement.
-
-- Prefer a small set of strong, specific tags over a large set containing weak, repetitive or marginally useful tags.
-
-- Aim for about 3 to 6 strong tags when the supplied PRODUCT FACTS support that many. Fewer tags are acceptable when there is not enough reliable information. Never invent tags simply to reach a target number.
-
-PROMPT;
+		return implode("\n", [
+			'=== TAG RULES ===',
+			'When generating tags, return the complete recommended final tag set for this product.',
+			'',
+			'Review any existing product tags supplied in PRODUCT FACTS before producing the final tag list.',
+			'',
+			'Follow these tag rules:',
+			'',
+			'- Treat the returned tags array as the complete recommended final tag set for this product.',
+			'',
+			'- Review the existing product tags against the PRODUCT FACTS before deciding what to keep, remove or add.',
+			'',
+			'- Keep existing tags that are accurate, specific, relevant and genuinely useful for identifying this product.',
+			'',
+			'- If an existing tag is weak, vague or overly broad, replace it with a clearer and more product-specific tag when the PRODUCT FACTS support a better alternative.',
+			'',
+			'- Remove existing tags that are unrelated, misleading, incorrect or clearly inappropriate for this product.',
+			'',
+			'- Do not keep a weak or generic tag merely because it is technically related to the product.',
+			'',
+			'- Add useful missing tags when they are directly supported by the PRODUCT FACTS.',
+			'',
+			'- Prefer tags that identify what the product is, its important type, material, ingredient, function, feature or use when those facts are explicitly available.',
+			'',
+			'- Do not invent product features, materials, ingredients, uses, compatibility or characteristics in order to create tags.',
+			'',
+			'- Every tag in the final set should add distinct value. Remove duplicates, near-duplicates and redundant tags that express essentially the same meaning.',
+			'',
+			'- When both a broad tag and a more specific tag communicate the same idea, prefer the more specific tag unless the broad tag adds meaningful value.',
+			'',
+			'- Avoid vague or generic tags such as "item", "product", "good product", "nice", "quality", "food", "drink", "refreshment" or similar terms when stronger product-specific tags are available.',
+			'',
+			'- Do not remove a strong existing tag merely to replace it with a different wording that provides no real improvement.',
+			'',
+			'- Prefer a small set of strong, specific tags over a large set containing weak, repetitive or marginally useful tags.',
+			'',
+			'- Aim for about 3 to 6 strong tags when the supplied PRODUCT FACTS support that many. Fewer tags are acceptable when there is not enough reliable information. Never invent tags simply to reach a target number.',
+			'',
+		]);
 	}
 
 
@@ -311,21 +311,21 @@ PROMPT;
 			$selectedFields
 		);
 
-		return <<<PROMPT
-=== OUTPUT REQUIREMENTS ===
-Return exactly ONE valid JSON object and nothing else.
-
-Use exactly these top-level fields:
-{$fieldList}
-
-Do not use Markdown code fences.
-Do not add headings, explanations, commentary or text before or after the JSON.
-Do not add any top-level fields that were not requested.
-
-The JSON object must match this schema:
-
-{$schemaJson}
-PROMPT;
+		return implode("\n", [
+			'=== OUTPUT REQUIREMENTS ===',
+			'Return exactly ONE valid JSON object and nothing else.',
+			'',
+			'Use exactly these top-level fields:',
+			$fieldList,
+			'',
+			'Do not use Markdown code fences.',
+			'Do not add headings, explanations, commentary or text before or after the JSON.',
+			'Do not add any top-level fields that were not requested.',
+			'',
+			'The JSON object must match this schema:',
+			'',
+			$schemaJson,
+		]);
 	}
 
 
@@ -350,10 +350,7 @@ PROMPT;
 
 		if (! is_string($json)) {
 			throw new RuntimeException(
-				sprintf(
-					'Unable to encode the %s prompt layer.',
-					$title
-				)
+				'Unable to encode a prompt layer.'
 			);
 		}
 
