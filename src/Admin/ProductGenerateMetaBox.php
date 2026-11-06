@@ -64,10 +64,12 @@ final class ProductGenerateMetaBox
 
         // Read-only GET product ID selects the editor's current product.
         // No state changes occur here; REST apply uses separate authorization.
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only editor lookup.
-        $productId = isset($_GET['post'])
-            ? absint(wp_unslash($_GET['post']))
-            : 0;
+        // No form is submitted or product content changed here: this reads
+        // the currently opened WooCommerce product editor's GET post ID.
+        // The later Generate/Apply REST actions enforce their own permissions
+        // and nonces, so adding a nonce to this URL lookup is inappropriate.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin product editor URL.
+        $productId = isset($_GET['post']) ? absint(wp_unslash($_GET['post'])) : 0;
 
         if ($productId <= 0 || ! function_exists('wc_get_product')) {
             return;
