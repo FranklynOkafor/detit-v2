@@ -62,6 +62,9 @@ final class ProductGenerateMetaBox
             return;
         }
 
+        // Read-only GET product ID selects the editor's current product.
+        // No state changes occur here; REST apply uses separate authorization.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only editor lookup.
         $productId = isset($_GET['post'])
             ? absint(wp_unslash($_GET['post']))
             : 0;
