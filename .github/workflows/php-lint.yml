@@ -22,3 +22,5 @@ jobs:
           set -euo pipefail
           find . -type f -name '*.php' -not -path './vendor/*' -print0 |
             xargs -0 -r -n1 php -l
+      - name: Verify Plugin Check remediation smoke
+        run: php tools/release-plugin-check-fixes-smoke.php
