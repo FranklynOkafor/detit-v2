@@ -38,10 +38,10 @@ final class ProductIssuesAbility
         wp_register_ability(
             self::NAME,
             [
-                'label' => __('Get Product Catalog Issues', self::TEXT_DOMAIN),
+                'label' => __('Get Product Catalog Issues', 'detit-product-content-generator-for-woocommerce'),
                 'description' => __(
                     'Detect missing or incomplete WooCommerce catalog information without modifying the product.',
-                    self::TEXT_DOMAIN
+                    'detit-product-content-generator-for-woocommerce'
                 ),
                 'category' => 'detit-catalog',
                 'input_schema' => [
@@ -114,7 +114,7 @@ final class ProductIssuesAbility
         if (! $this->canRead($input)) {
             return new \WP_Error(
                 'detit_issues_permission_denied',
-                __('You cannot access these product issues.', self::TEXT_DOMAIN)
+                __('You cannot access these product issues.', 'detit-product-content-generator-for-woocommerce')
             );
         }
 
@@ -123,7 +123,7 @@ final class ProductIssuesAbility
         if ($context === null) {
             return new \WP_Error(
                 'detit_issues_product_unavailable',
-                __('This product is unavailable.', self::TEXT_DOMAIN)
+                __('This product is unavailable.', 'detit-product-content-generator-for-woocommerce')
             );
         }
 
