@@ -229,6 +229,7 @@ final class ApplyController
                     && defined('WP_DEBUG')
                     && WP_DEBUG
                 ) {
+                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- WP_DEBUG-only diagnostic; no output to visitors.
                     error_log(
                         '[DetIt ApplyController] '
                             . 'Could not mark generation '
@@ -263,6 +264,7 @@ final class ApplyController
                     defined('WP_DEBUG')
                     && WP_DEBUG
                 ) {
+                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- WP_DEBUG-only diagnostic; no output to visitors.
                     error_log(
                         '[DetIt ApplyController] '
                             . 'Product content was applied, but the '
@@ -308,6 +310,7 @@ final class ApplyController
                 && defined('WP_DEBUG')
                 && WP_DEBUG
             ) {
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- WP_DEBUG-only diagnostic; no output to visitors.
                 error_log(
                     '[DetIt ApplyController] '
                         . 'Product content was applied, but generation '
@@ -327,6 +330,7 @@ final class ApplyController
             );
         } catch (\Throwable $exception) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- WP_DEBUG-only diagnostic; no output to visitors.
                 error_log(
                     '[DetIt ApplyController] '
                         . $exception->getMessage()
