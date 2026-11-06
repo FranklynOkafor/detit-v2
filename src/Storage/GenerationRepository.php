@@ -75,9 +75,12 @@ class GenerationRepository
 
     public function find(int $generationId): ?array
     {
-        $row = $this->wpdb->get_row(
-            $this->wpdb->prepare(
-                "SELECT * FROM {$this->table} WHERE id = %d",
+        $wpdb = $this->wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM %i WHERE id = %d",
+                $this->table,
                 $generationId
             ),
             ARRAY_A
@@ -92,15 +95,18 @@ class GenerationRepository
         int $productId,
         int $limit = 20
     ): array {
+        $wpdb = $this->wpdb;
+
         $limit = max(1, min($limit, 100));
 
-        $rows = $this->wpdb->get_results(
-            $this->wpdb->prepare(
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
+                FROM %i
                 WHERE product_id = %d
                 ORDER BY id DESC
                 LIMIT %d",
+                $this->table,
                 $productId,
                 $limit
             ),
@@ -117,6 +123,8 @@ class GenerationRepository
     public function findLatestCompletedApplyByProduct(
         int $productId
     ): ?array {
+        $wpdb = $this->wpdb;
+
         if ($productId <= 0) {
             return null;
         }
@@ -129,14 +137,15 @@ class GenerationRepository
      * an older completed Apply as though it were the
      * latest operation.
      */
-        $row = $this->wpdb->get_row(
-            $this->wpdb->prepare(
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
                 "SELECT *
-            FROM {$this->table}
+            FROM %i
             WHERE product_id = %d
             AND operation = 'apply'
             ORDER BY id DESC
             LIMIT 1",
+                $this->table,
                 $productId
             ),
             ARRAY_A
