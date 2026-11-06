@@ -218,7 +218,7 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
-                        // translators: 1: all products, 2: scanned, 3: unscanned, 4: products below score 70.
+                        /* translators: 1: all products, 2: scanned, 3: unscanned, 4: products below score 70. */
                         esc_html__(
                             'Products: %1$d | Scanned: %2$d | Not scanned: %3$d | Below 70: %4$d',
                             'detit-product-content-generator-for-woocommerce'
@@ -342,7 +342,7 @@ final class ContentHealthPage
                                         for="detit-select-<?php echo (int) $product['product_id']; ?>">
                                         <?php
                                         printf(
-                                            // translators: %d: WooCommerce product ID.
+                                            /* translators: %d: WooCommerce product ID. */
                                             esc_html__('Select product %d for audit', 'detit-product-content-generator-for-woocommerce'),
                                             (int) $product['product_id']
                                         );
@@ -479,7 +479,7 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
-                        // translators: 1: current page, 2: total pages, 3: products matching filters.
+                        /* translators: 1: current page, 2: total pages, 3: products matching filters. */
                         esc_html__('Page %1$d of %2$d · %3$d matching products', 'detit-product-content-generator-for-woocommerce'),
                         (int) $data['page'],
                         (int) $data['pages'],
@@ -615,7 +615,7 @@ final class ContentHealthPage
             $failed = isset($_GET['detit_failed']) ? absint($_GET['detit_failed']) : 0;
             echo '<div class="notice notice-info"><p>';
             printf(
-                // translators: 1: number of products audited, 2: number of audits that failed.
+                /* translators: 1: number of products audited, 2: number of audits that failed. */
                 esc_html__('Batch complete: %1$d audited, %2$d failed.', 'detit-product-content-generator-for-woocommerce'),
                 esc_html((string) $completed),
                 esc_html((string) $failed)
