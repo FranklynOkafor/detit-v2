@@ -220,7 +220,7 @@ final class GenerationResult
                 throw new InvalidArgumentException(
                     sprintf(
                         'Unsupported generation field "%s".',
-                        $field
+                        esc_html($field)
                     )
                 );
             }
@@ -252,7 +252,7 @@ final class GenerationResult
                 throw new InvalidArgumentException(
                     sprintf(
                         'Missing required generation field "%s".',
-                        $field
+                        esc_html($field)
                     )
                 );
             }
@@ -266,7 +266,7 @@ final class GenerationResult
                 throw new InvalidArgumentException(
                     sprintf(
                         'Unexpected generation field "%s".',
-                        (string) $field
+                        esc_html((string) $field)
                     )
                 );
             }
@@ -281,7 +281,7 @@ final class GenerationResult
             throw new InvalidArgumentException(
                 sprintf(
                     'Generation field "%s" must be a string.',
-                    $field
+                    esc_html($field)
                 )
             );
         }
@@ -307,7 +307,7 @@ final class GenerationResult
                 throw new InvalidArgumentException(
                     sprintf(
                         'Generation tag at index %s must be a string.',
-                        (string) $index
+                        esc_html((string) $index)
                     )
                 );
             }

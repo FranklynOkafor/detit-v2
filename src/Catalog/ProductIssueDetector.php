@@ -131,7 +131,7 @@ final class ProductIssueDetector
     private function hasVisibleText(string $value): bool
     {
         $text = html_entity_decode(
-            strip_tags($value),
+            wp_strip_all_tags($value),
             ENT_QUOTES | ENT_HTML5,
             'UTF-8'
         );

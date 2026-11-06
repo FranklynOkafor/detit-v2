@@ -63,9 +63,13 @@ final class ContentHealthDashboardRepository
 
         $table = $wpdb->prefix . 'detit_product_index';
 
-        // Every filter comes from a fixed local allowlist, not raw user SQL.
-        $where = "p.post_type = 'product'
+        // No user-provided SQL is ever interpolated here. Filters and
+        // sorting come exclusively from the constant allowlists above.
+        // Dynamic identifiers use the WP 6.2+ %i placeholder; the search
+        // term and numeric limits use value placeholders.
+        $where = "p.post_type = %s
             AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')";
+        $whereValues = ['product'];
 
         if ($filter === 'scanned') {
             $where .= ' AND i.last_scanned_at IS NOT NULL';
@@ -75,45 +79,61 @@ final class ContentHealthDashboardRepository
             $where .= ' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70';
         }
 
-        // Apply search before COUNT and LIMIT, so it covers the full catalog
-        // and all pages rather than filtering just the displayed 20 rows.
         if ($search !== '') {
             $like = '%' . $wpdb->esc_like($search) . '%';
 
             if (ctype_digit($search)) {
-                $where .= $wpdb->prepare(
-                    ' AND (p.post_title LIKE %s OR p.ID = %d)',
-                    $like,
-                    (int) $search
-                );
+                $where .= ' AND (p.post_title LIKE %s OR p.ID = %d)';
+                $whereValues[] = $like;
+                $whereValues[] = (int) $search;
             } else {
-                $where .= $wpdb->prepare(' AND p.post_title LIKE %s', $like);
+                $where .= ' AND p.post_title LIKE %s';
+                $whereValues[] = $like;
             }
         }
 
         $orderBy = self::SORTS[$sort];
 
-        $from = "FROM {$wpdb->posts} p
-            LEFT JOIN {$table} i ON i.product_id = p.ID";
+        // The totals SQL has a fixed query shape; both table names are
+        // safely bound as identifiers, not concatenated SQL strings.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- This read-only health page must reflect live product audit updates.
+        $totals = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT
+                    COUNT(*) AS products,
+                    SUM(CASE WHEN i.last_scanned_at IS NOT NULL THEN 1 ELSE 0 END) AS scanned,
+                    SUM(CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END) AS unscanned,
+                    SUM(CASE WHEN i.last_scanned_at IS NOT NULL
+                        AND i.content_health < 70 THEN 1 ELSE 0 END) AS needs_attention
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')",
+                $wpdb->posts,
+                $table,
+                'product'
+            ),
+            ARRAY_A
+        );
 
-        $totalsSql = "SELECT
-                COUNT(*) AS products,
-                SUM(CASE WHEN i.last_scanned_at IS NOT NULL THEN 1 ELSE 0 END) AS scanned,
-                SUM(CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END) AS unscanned,
-                SUM(CASE WHEN i.last_scanned_at IS NOT NULL
-                    AND i.content_health < 70 THEN 1 ELSE 0 END) AS needs_attention
-            {$from}
-            WHERE p.post_type = 'product'
-            AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')";
-
-        $totals = $wpdb->get_row($totalsSql, ARRAY_A);
         if (! is_array($totals) || $wpdb->last_error !== '') {
             return new \WP_Error('detit_health_query_failed', 'Unable to read audit summary.');
         }
 
-        $count = (int) $wpdb->get_var(
-            "SELECT COUNT(*) {$from} WHERE {$where}"
+        // Only $where (constructed from fixed clauses plus %s/%d tokens)
+        // is dynamic. All identifiers and values remain in WPDB prepare().
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Where clauses are allowlisted; data is placeholder-bound.
+        $countSql = "SELECT COUNT(*)
+            FROM %i p
+            LEFT JOIN %i i ON i.product_id = p.ID
+            WHERE {$where}";
+
+        $countValues = array_merge(
+            [$wpdb->posts, $table],
+            $whereValues
         );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is assembled from safe clauses and then prepared with bound values.
+        $count = (int) $wpdb->get_var($wpdb->prepare($countSql, $countValues));
         if ($wpdb->last_error !== '') {
             return new \WP_Error('detit_health_query_failed', 'Unable to count audit rows.');
         }
@@ -122,18 +142,30 @@ final class ContentHealthDashboardRepository
         $page = min($page, $pages);
         $offset = ($page - 1) * self::PAGE_SIZE;
 
+        // ORDER BY is an exact constant allowlist value, not a request
+        // string. Column identifiers are thus not caller-controlled.
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- WHERE and ORDER BY are built from fixed allowlisted SQL.
+        $listSql = "SELECT p.ID AS product_id, p.post_title AS title,
+                i.content_health, i.issue_flags, i.source_hash,
+                i.rules_version, i.last_scanned_at
+            FROM %i p
+            LEFT JOIN %i i ON i.product_id = p.ID
+            WHERE {$where}
+            ORDER BY {$orderBy}
+            LIMIT %d OFFSET %d";
+
+        $listValues = array_merge(
+            $countValues,
+            [self::PAGE_SIZE, $offset]
+        );
+        // The dynamic SQL is built from fixed, audited WHERE fragments
+        // and an ORDER BY value chosen only from the SORTS constant.
+        // All request-provided search values and identifiers are bound
+        // using WPDB placeholders in the immediately following prepare().
+        // A static scanner cannot follow the validated $listSql assembly.
         $raw = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT p.ID AS product_id, p.post_title AS title,
-                    i.content_health, i.issue_flags, i.source_hash,
-                    i.rules_version, i.last_scanned_at
-                 {$from}
-                 WHERE {$where}
-                 ORDER BY {$orderBy}
-                 LIMIT %d OFFSET %d",
-                self::PAGE_SIZE,
-                $offset
-            ),
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $listSql contains only trusted fragments and placeholders, never raw request data.
+            $wpdb->prepare($listSql, $listValues),
             ARRAY_A
         );
 

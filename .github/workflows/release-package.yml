@@ -1,0 +1,70 @@
+name: V2 release ZIP checks
+
+on:
+  pull_request:
+    paths:
+      - 'detit.php'
+      - 'readme.txt'
+      - 'uninstall.php'
+      - 'src/**'
+      - 'assets/**'
+      - 'tools/build-release.ps1'
+      - '.github/workflows/release-package.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - 'detit.php'
+      - 'readme.txt'
+      - 'uninstall.php'
+      - 'src/**'
+      - 'assets/**'
+      - 'tools/build-release.ps1'
+      - '.github/workflows/release-package.yml'
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check product generator JavaScript syntax
+        run: node --check assets/js/product-generate.js
+      - name: Create and verify ZIP on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/build-release.ps1
+      - name: Verify builder also runs on PowerShell 7
+        shell: pwsh
+        run: ./tools/build-release.ps1
+      - name: Confirm archive size and top-level plugin directory
+        shell: pwsh
+        run: |
+          $zip = 'dist/detit-2.0.0.zip'
+          if (-not (Test-Path $zip)) { throw 'Release ZIP missing.' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
+          try {
+            $bad = @($archive.Entries | Where-Object {
+              $_.FullName -notlike 'detit-product-content-generator-for-woocommerce/*'
+            })
+            if ($bad.Count -gt 0) { throw 'Files exist outside the single plugin directory.' }
+
+            # Regression for actual LocalWP install failure:
+            # WordPress could not copy a backslash directory ZIP entry.
+            $windowsPaths = @($archive.Entries | Where-Object { $_.FullName.Contains('\') })
+            if ($windowsPaths.Count -gt 0) {
+              throw 'ZIP has backslash entry names; WordPress cannot extract this reliably.'
+            }
+
+            $directoryEntries = @($archive.Entries | Where-Object { $_.FullName.EndsWith('/') })
+            if ($directoryEntries.Count -gt 0) {
+              throw 'ZIP contains unnecessary directory-only entries.'
+            }
+
+            $entryNames = @($archive.Entries | ForEach-Object { $_.FullName })
+            if ($entryNames -notcontains 'detit-product-content-generator-for-woocommerce/assets/js/product-generate.js') {
+              throw 'Release ZIP is missing its generator JavaScript.'
+            }
+          }
+          finally { $archive.Dispose() }
+          Write-Host 'ARCHIVE_ROOT_STRUCTURE: PASS'
+          Write-Host 'WORDPRESS_ZIP_ENTRY_COMPATIBILITY: PASS'

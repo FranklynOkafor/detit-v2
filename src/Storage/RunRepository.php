@@ -51,9 +51,12 @@ class RunRepository
 
     public function find(int $runId): ?array
     {
-        $row = $this->wpdb->get_row(
-            $this->wpdb->prepare(
-                "SELECT * FROM {$this->table} WHERE id = %d",
+        $wpdb = $this->wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM %i WHERE id = %d",
+                $this->table,
                 $runId
             ),
             ARRAY_A
