@@ -158,8 +158,13 @@ final class ContentHealthDashboardRepository
             $countValues,
             [self::PAGE_SIZE, $offset]
         );
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All user data and identifiers are passed via safe WPDB placeholders.
+        // The dynamic SQL is built from fixed, audited WHERE fragments
+        // and an ORDER BY value chosen only from the SORTS constant.
+        // All request-provided search values and identifiers are bound
+        // using WPDB placeholders in the immediately following prepare().
+        // A static scanner cannot follow the validated $listSql assembly.
         $raw = $wpdb->get_results(
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $listSql contains only trusted fragments and placeholders, never raw request data.
             $wpdb->prepare($listSql, $listValues),
             ARRAY_A
         );
