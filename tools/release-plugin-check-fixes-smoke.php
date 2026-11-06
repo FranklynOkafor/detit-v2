@@ -47,7 +47,14 @@ try {
     $runItems = $read('src/Storage/RunItemRepository.php');
     $uninstall = $read('uninstall.php');
 
-    $check('README_TESTED_UP_TO_PRESENT', preg_match('/^Tested up to:\s*[0-9.]+$/mi', $readme) === 1);
+    // Git can check out readme.txt with CRLF on Windows; PCRE's $ with /m
+    // does not ignore the preceding CR. Accept either LF or CRLF safely.
+    $testedUpToPattern = '/^Tested up to:[ \t]*[0-9]+(?:\.[0-9]+)*[ \t]*\r?$/mi';
+    $check('README_TESTED_UP_TO_PRESENT', preg_match($testedUpToPattern, $readme) === 1);
+    $check('README_TESTED_UP_TO_WINDOWS_CRLF', preg_match(
+        $testedUpToPattern,
+        str_replace(["\r\n", "\n"], "\r\n", $readme)
+    ) === 1);
     $check('NO_NONEXISTENT_DOMAIN_PATH', stripos($plugin, 'Domain Path: languages') === false);
     $check('MANUAL_TRANSLATION_LOADER_REMOVED', ! str_contains($bootstrap, 'load_plugin_textdomain('));
     $check('DASHBOARD_LITERAL_TRANSLATION_DOMAINS', ! str_contains($page, 'self::TD'));
