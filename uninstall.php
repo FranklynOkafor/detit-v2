@@ -23,11 +23,14 @@ foreach ([
     'detit_run_items',
     'detit_generations',
     'detit_product_index',
-] as $suffix) {
-    $table = $wpdb->prefix . $suffix;
+] as $detit_suffix) {
+    $detit_table = $wpdb->prefix . $detit_suffix;
 
     // %i safely quotes SQL identifiers (available since WP 6.2).
+    // Uninstall is an explicit admin-authorized schema cleanup. Its table
+    // name comes solely from the fixed, DetIt-owned suffix list above.
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional one-time uninstall cleanup.
     $wpdb->query(
-        $wpdb->prepare('DROP TABLE IF EXISTS %i', $table)
+        $wpdb->prepare('DROP TABLE IF EXISTS %i', $detit_table)
     );
 }
