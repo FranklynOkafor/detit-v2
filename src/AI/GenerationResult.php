@@ -69,28 +69,28 @@ final class GenerationResult
                 case OutputSchema::FIELD_TITLE:
                     $title = self::normalizeString(
                         $data[$field],
-                        esc_html($field)
+                        $field
                     );
                     break;
 
                 case OutputSchema::FIELD_SHORT_DESCRIPTION:
                     $shortDescription = self::normalizeString(
                         $data[$field],
-                        esc_html($field)
+                        $field
                     );
                     break;
 
                 case OutputSchema::FIELD_DESCRIPTION:
                     $description = self::normalizeString(
                         $data[$field],
-                        esc_html($field)
+                        $field
                     );
                     break;
 
                 case OutputSchema::FIELD_META_DESCRIPTION:
                     $metaDescription = self::normalizeString(
                         $data[$field],
-                        esc_html($field)
+                        $field
                     );
                     break;
 
