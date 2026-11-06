@@ -96,6 +96,7 @@ final class ContentHealthDashboardRepository
 
         // The totals SQL has a fixed query shape; both table names are
         // safely bound as identifiers, not concatenated SQL strings.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- This read-only health page must reflect live product audit updates.
         $totals = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT
