@@ -50,7 +50,7 @@ final class ContentHealthPage
         check_admin_referer('detit_health_scan_batch');
 
         $rawCursor = isset($_POST['after_product_id'])
-            ? wp_unslash($_POST['after_product_id'])
+            ? sanitize_text_field(wp_unslash($_POST['after_product_id']))
             : '0';
         $cursor = is_scalar($rawCursor)
             ? filter_var((string) $rawCursor, FILTER_VALIDATE_INT, [
@@ -86,7 +86,7 @@ final class ContentHealthPage
         check_admin_referer('detit_health_scan_selected');
 
         $raw = isset($_POST['product_ids'])
-            ? wp_unslash($_POST['product_ids'])
+            ? map_deep(wp_unslash($_POST['product_ids']), 'sanitize_text_field')
             : [];
 
         $ids = self::parseSelectedIds($raw);
@@ -180,6 +180,10 @@ final class ContentHealthPage
         ]));
     }
 
+    // Read-only GET parameters control sorting, filtering and pagination.
+    // No product/audit writes are made by this method, so an admin nonce
+    // would block normal bookmarkable filter links unnecessarily.
+    // phpcs:disable WordPress.Security.NonceVerification.Recommended
     public function renderPage(): void
     {
         $this->requirePermission();
@@ -214,6 +218,7 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
+                        // translators: 1: all products, 2: scanned, 3: unscanned, 4: products below score 70.
                         esc_html__(
                             'Products: %1$d | Scanned: %2$d | Not scanned: %3$d | Below 70: %4$d',
                             'detit-product-content-generator-for-woocommerce'
@@ -337,6 +342,7 @@ final class ContentHealthPage
                                         for="detit-select-<?php echo (int) $product['product_id']; ?>">
                                         <?php
                                         printf(
+                                            // translators: %d: WooCommerce product ID.
                                             esc_html__('Select product %d for audit', 'detit-product-content-generator-for-woocommerce'),
                                             (int) $product['product_id']
                                         );
@@ -473,6 +479,7 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
+                        // translators: 1: current page, 2: total pages, 3: products matching filters.
                         esc_html__('Page %1$d of %2$d · %3$d matching products', 'detit-product-content-generator-for-woocommerce'),
                         (int) $data['page'],
                         (int) $data['pages'],
@@ -500,6 +507,8 @@ final class ContentHealthPage
         </div>
         <?php
     }
+
+    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     private function batchForm(int $cursor, string $label, array $view): void
     {
@@ -547,6 +556,10 @@ final class ContentHealthPage
         }
     }
 
+    // Called only by scanBatch/scanProduct/scanSelected AFTER verifying
+    // each action-specific nonce, and only preserves view parameters.
+    // GET notices only display sanitized result data; no writes occur.
+    // phpcs:disable WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
     private function viewReturnArgs(): array
     {
         $args = [];
@@ -602,13 +615,16 @@ final class ContentHealthPage
             $failed = isset($_GET['detit_failed']) ? absint($_GET['detit_failed']) : 0;
             echo '<div class="notice notice-info"><p>';
             printf(
+                // translators: 1: number of products audited, 2: number of audits that failed.
                 esc_html__('Batch complete: %1$d audited, %2$d failed.', 'detit-product-content-generator-for-woocommerce'),
-                $completed,
-                $failed
+                esc_html((string) $completed),
+                esc_html((string) $failed)
             );
             echo '</p></div>';
         }
     }
+
+    // phpcs:enable WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
 
     private function requirePermission(): void
     {
