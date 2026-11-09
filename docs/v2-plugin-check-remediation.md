@@ -51,6 +51,15 @@ To remove the database analyzer error **at its source** rather than solely annot
 
 The 22 remaining warnings are predominantly direct SQL access and no-caching notices for DetIt-owned tables, plus one intentional uninstall schema change and a read-only product editor GET. Warnings require individual review; don't introduce caching without valid invalidation or remove intentional uninstall cleanup solely to make the count smaller.
 
+## November 9, 22:53 Plugin Check — zero errors
+
+The official Plugin Check report from `test-site` generated **2026-11-09 22:53:25** lists **0 ERROR and 17 WARNING**. This is a reduction from 185 original findings, including clearing all 115 original errors. The remaining 17 warnings consist of:
+- 2 `WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber` notices at `ContentHealthDashboardRepository.php:124` and `:165`. Both queries were already safe at runtime because `$wpdb->prepare()` accepts a single argument array. The static analyzer counted each array as just one placeholder replacement, hence its misleading result. **Code corrected** by passing 11 and 20 replacement values explicitly and in order, matching the literal placeholders exactly.
+- 14 `WordPress.DB.DirectDatabaseQuery.{DirectQuery,NoCaching}` warnings in custom DetIt history/audit repository reads. These are read-only, use prepared table identifiers and value placeholders, and deliberately read live tables. Caching would require explicit invalidation after every corresponding write and must not be introduced merely to silence static analysis.
+- 1 `WordPress.DB.DirectDatabaseQuery.SchemaChange` warning in `uninstall.php` for `DROP TABLE IF EXISTS` on the four **DetIt-owned** audit/history tables after explicit WordPress uninstall. This is intentional; no WooCommerce product content is removed.
+
+**Important:** The explicit placeholder rewrite has not yet been validated by a fresh official Plugin Check. The user's next steps are to pull, run both the release static smoke and the three dashboard regression suites, rebuild the ZIP, replace the test-site plugin, and rerun Plugin Check. We expect only the 15 reviewed database/uninstall warnings, but **do not claim this until the official scan confirms it**.
+
 ## Final regression gates
 
 - [ ] Updated ZIP installs/replaces the existing plugin without fatal errors.
