@@ -84,8 +84,8 @@ try {
     $check('DASHBOARD_EXPLICIT_PREPARE_VALUES',
         ! str_contains($dashboard, '$bindings')
         && ! str_contains($dashboard, '$listBindings')
-        && str_contains($dashboard, "                $numericId\n")
-        && str_contains($dashboard, "                $offset\n"));
+        && str_contains($dashboard, '$numericId' . "\n")
+        && str_contains($dashboard, '$offset' . "\n"));
     $check('REPOSITORY_IDENTIFIERS_PREPARED', ! str_contains(
         $generation . $index . $runs . $runItems,
         '{$this->table}'
