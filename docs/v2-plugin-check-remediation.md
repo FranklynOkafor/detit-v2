@@ -43,6 +43,14 @@ Confirm `RESULT: PASS` and note the `RELEASE_ZIP` path.
 
 After installation, run **Tools → Plugin Check** on Area 51 again. Export the latest report and compare it to the 185-finding baseline.
 
+## November 9 follow-up — repeated 24 findings on test-site
+
+The user uploaded a new report from `test-site` generated 2026-11-09 22:36:24. It is **identical** to the prior 2026-11-06 02:20 report: 2 errors and 22 warnings. Notably, the reported concatenated ability translation at `ProductSummaryAbility.php:73` no longer exists in the branch, which strongly suggests the tested ZIP was an earlier build. Rebuilding from the latest branch and replacing the test-site plugin is required to verify this.
+
+To remove the database analyzer error **at its source** rather than solely annotate it, `ContentHealthDashboardRepository::browse()` now uses **static SQL literals directly inside `$wpdb->prepare()`** for both count and paginated listing. Filter and search terms, numeric IDs and the sort selection are bound as data using `%s`/`%d`; table names use `%i`. The five sorting behaviors are retained using SQL `CASE WHEN` rather than interpolated SQL fragments. It is essential to rerun `stages62-63-smoke.php`, `stage62-search-sort-smoke.php`, and `stage62-selected-scan-smoke.php` locally to confirm real MySQL behavior after this query rewrite. Syntax-only CI is not sufficient.
+
+The 22 remaining warnings are predominantly direct SQL access and no-caching notices for DetIt-owned tables, plus one intentional uninstall schema change and a read-only product editor GET. Warnings require individual review; don't introduce caching without valid invalidation or remove intentional uninstall cleanup solely to make the count smaller.
+
 ## Final regression gates
 
 - [ ] Updated ZIP installs/replaces the existing plugin without fatal errors.
