@@ -73,22 +73,11 @@ final class ContentHealthDashboardRepository
         $numericSearch = ctype_digit($search) ? 1 : 0;
         $numericId = $numericSearch === 1 ? (int) $search : 0;
 
-        // Shared bindings for the count and the paginated list:
-        // 2 table identifiers, product post type, 4 filter tests,
-        // then the search term, escaped LIKE term, numeric flag and ID.
-        $bindings = [
-            $wpdb->posts,
-            $table,
-            'product',
-            $filter,
-            $filter,
-            $filter,
-            $filter,
-            $search,
-            $like,
-            $numericSearch,
-            $numericId,
-        ];
+        // Keep placeholder arguments explicit in each query. Although
+        // wpdb::prepare() accepts a single array of replacements, the
+        // WordPress Plugin Check scanner counts that as one argument.
+        // Matching each literal placeholder with one argument also makes
+        // the SQL reviewable without having to trace array construction.
 
         // Totals must describe the entire catalog, ignoring active view
         // filters and pagination, just as the earlier dashboard did.
@@ -138,7 +127,17 @@ final class ContentHealthDashboardRepository
                      OR p.post_title LIKE %s
                      OR (%d = 1 AND p.ID = %d)
                  )",
-                $bindings
+                $wpdb->posts,
+                $table,
+                'product',
+                $filter,
+                $filter,
+                $filter,
+                $filter,
+                $search,
+                $like,
+                $numericSearch,
+                $numericId
             )
         );
 
@@ -154,12 +153,6 @@ final class ContentHealthDashboardRepository
         // CASE expressions preserve our five existing sort semantics:
         // product ID, A-Z, Z-A, score low-high and score high-low.
         // Unscanned products are last when sorting by score.
-        $listBindings = array_merge(
-            $bindings,
-            [$sort, $sort, $sort, $sort, $sort, $sort, $sort],
-            [self::PAGE_SIZE, $offset]
-        );
-
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Fresh audit results are required.
         $raw = $wpdb->get_results(
             $wpdb->prepare(
@@ -193,7 +186,26 @@ final class ContentHealthDashboardRepository
                    CASE WHEN %s = 'id_asc' THEN p.ID END ASC,
                    p.ID ASC
                  LIMIT %d OFFSET %d",
-                $listBindings
+                $wpdb->posts,
+                $table,
+                'product',
+                $filter,
+                $filter,
+                $filter,
+                $filter,
+                $search,
+                $like,
+                $numericSearch,
+                $numericId,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                self::PAGE_SIZE,
+                $offset
             ),
             ARRAY_A
         );
