@@ -68,6 +68,19 @@ try {
     $check('SELECTED_INPUT_SANITIZATION_PRESENT', str_contains($page, "map_deep(wp_unslash("));
     $check('AUDIT_TABLE_IDENTIFIERS_PREPARED', str_contains($dashboard, 'FROM %i p')
         && str_contains($dashboard, 'LEFT JOIN %i i'));
+    // The dashboard count and paginated list now use inline literal SQL
+    // for WPDB prepare(), not variable SQL strings hidden from static review.
+    $check('DASHBOARD_NO_VARIABLE_SQL_STATEMENTS',
+        ! str_contains($dashboard, '$countSql')
+        && ! str_contains($dashboard, '$listSql')
+        && ! str_contains($dashboard, '{$where}')
+        && ! str_contains($dashboard, '{$orderBy}'));
+    $check('DASHBOARD_SORT_AND_FILTER_BOUND',
+        str_contains($dashboard, 'CASE WHEN %s = \'score_asc\'')
+        && str_contains($dashboard, 'CASE WHEN %s = \'name_desc\'')
+        && str_contains($dashboard, '%s = \'needs_attention\'')
+        && str_contains($dashboard, 'p.post_title LIKE %s')
+        && str_contains($dashboard, 'LIMIT %d OFFSET %d'));
     $check('REPOSITORY_IDENTIFIERS_PREPARED', ! str_contains(
         $generation . $index . $runs . $runItems,
         '{$this->table}'
