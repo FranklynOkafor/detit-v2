@@ -81,6 +81,11 @@ try {
         && str_contains($dashboard, '%s = \'needs_attention\'')
         && str_contains($dashboard, 'p.post_title LIKE %s')
         && str_contains($dashboard, 'LIMIT %d OFFSET %d'));
+    $check('DASHBOARD_EXPLICIT_PREPARE_VALUES',
+        ! str_contains($dashboard, '$bindings')
+        && ! str_contains($dashboard, '$listBindings')
+        && str_contains($dashboard, "                $numericId\n")
+        && str_contains($dashboard, "                $offset\n"));
     $check('REPOSITORY_IDENTIFIERS_PREPARED', ! str_contains(
         $generation . $index . $runs . $runItems,
         '{$this->table}'
