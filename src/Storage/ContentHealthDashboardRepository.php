@@ -63,40 +63,36 @@ final class ContentHealthDashboardRepository
 
         $table = $wpdb->prefix . 'detit_product_index';
 
-        // No user-provided SQL is ever interpolated here. Filters and
-        // sorting come exclusively from the constant allowlists above.
-        // Dynamic identifiers use the WP 6.2+ %i placeholder; the search
-        // term and numeric limits use value placeholders.
-        $where = "p.post_type = %s
-            AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')";
-        $whereValues = ['product'];
+        // Every input below is a value bound through WPDB placeholders.
+        // The query text itself remains a PHP string literal, so the
+        // WordPress security scanner can verify its construction.
+        //
+        // This avoids interpolating dynamic WHERE and ORDER BY SQL, even
+        // when those fragments were previously built from safe allowlists.
+        $like = '%' . $wpdb->esc_like($search) . '%';
+        $numericSearch = ctype_digit($search) ? 1 : 0;
+        $numericId = $numericSearch === 1 ? (int) $search : 0;
 
-        if ($filter === 'scanned') {
-            $where .= ' AND i.last_scanned_at IS NOT NULL';
-        } elseif ($filter === 'unscanned') {
-            $where .= ' AND i.last_scanned_at IS NULL';
-        } elseif ($filter === 'needs_attention') {
-            $where .= ' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70';
-        }
+        // Shared bindings for the count and the paginated list:
+        // 2 table identifiers, product post type, 4 filter tests,
+        // then the search term, escaped LIKE term, numeric flag and ID.
+        $bindings = [
+            $wpdb->posts,
+            $table,
+            'product',
+            $filter,
+            $filter,
+            $filter,
+            $filter,
+            $search,
+            $like,
+            $numericSearch,
+            $numericId,
+        ];
 
-        if ($search !== '') {
-            $like = '%' . $wpdb->esc_like($search) . '%';
-
-            if (ctype_digit($search)) {
-                $where .= ' AND (p.post_title LIKE %s OR p.ID = %d)';
-                $whereValues[] = $like;
-                $whereValues[] = (int) $search;
-            } else {
-                $where .= ' AND p.post_title LIKE %s';
-                $whereValues[] = $like;
-            }
-        }
-
-        $orderBy = self::SORTS[$sort];
-
-        // The totals SQL has a fixed query shape; both table names are
-        // safely bound as identifiers, not concatenated SQL strings.
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- This read-only health page must reflect live product audit updates.
+        // Totals must describe the entire catalog, ignoring active view
+        // filters and pagination, just as the earlier dashboard did.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only live audit totals.
         $totals = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT
@@ -120,20 +116,32 @@ final class ContentHealthDashboardRepository
             return new \WP_Error('detit_health_query_failed', 'Unable to read audit summary.');
         }
 
-        // Only $where (constructed from fixed clauses plus %s/%d tokens)
-        // is dynamic. All identifiers and values remain in WPDB prepare().
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Where clauses are allowlisted; data is placeholder-bound.
-        $countSql = "SELECT COUNT(*)
-            FROM %i p
-            LEFT JOIN %i i ON i.product_id = p.ID
-            WHERE {$where}";
-
-        $countValues = array_merge(
-            [$wpdb->posts, $table],
-            $whereValues
+        // The four filter comparisons are mutually exclusive because the
+        // requested filter is validated against FILTERS earlier.
+        // Searches by title always work; all-digit searches also match ID.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Current filtered catalog count.
+        $count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*)
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')
+                 AND (
+                     %s = 'all'
+                     OR (%s = 'scanned' AND i.last_scanned_at IS NOT NULL)
+                     OR (%s = 'unscanned' AND i.last_scanned_at IS NULL)
+                     OR (%s = 'needs_attention' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70)
+                 )
+                 AND (
+                     %s = ''
+                     OR p.post_title LIKE %s
+                     OR (%d = 1 AND p.ID = %d)
+                 )",
+                $bindings
+            )
         );
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is assembled from safe clauses and then prepared with bound values.
-        $count = (int) $wpdb->get_var($wpdb->prepare($countSql, $countValues));
+
         if ($wpdb->last_error !== '') {
             return new \WP_Error('detit_health_query_failed', 'Unable to count audit rows.');
         }
@@ -142,30 +150,51 @@ final class ContentHealthDashboardRepository
         $page = min($page, $pages);
         $offset = ($page - 1) * self::PAGE_SIZE;
 
-        // ORDER BY is an exact constant allowlist value, not a request
-        // string. Column identifiers are thus not caller-controlled.
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- WHERE and ORDER BY are built from fixed allowlisted SQL.
-        $listSql = "SELECT p.ID AS product_id, p.post_title AS title,
-                i.content_health, i.issue_flags, i.source_hash,
-                i.rules_version, i.last_scanned_at
-            FROM %i p
-            LEFT JOIN %i i ON i.product_id = p.ID
-            WHERE {$where}
-            ORDER BY {$orderBy}
-            LIMIT %d OFFSET %d";
-
-        $listValues = array_merge(
-            $countValues,
+        // ORDER BY uses prepared sort *values*, never appended SQL.
+        // CASE expressions preserve our five existing sort semantics:
+        // product ID, A-Z, Z-A, score low-high and score high-low.
+        // Unscanned products are last when sorting by score.
+        $listBindings = array_merge(
+            $bindings,
+            [$sort, $sort, $sort, $sort, $sort, $sort, $sort],
             [self::PAGE_SIZE, $offset]
         );
-        // The dynamic SQL is built from fixed, audited WHERE fragments
-        // and an ORDER BY value chosen only from the SORTS constant.
-        // All request-provided search values and identifiers are bound
-        // using WPDB placeholders in the immediately following prepare().
-        // A static scanner cannot follow the validated $listSql assembly.
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Fresh audit results are required.
         $raw = $wpdb->get_results(
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $listSql contains only trusted fragments and placeholders, never raw request data.
-            $wpdb->prepare($listSql, $listValues),
+            $wpdb->prepare(
+                "SELECT p.ID AS product_id, p.post_title AS title,
+                    i.content_health, i.issue_flags, i.source_hash,
+                    i.rules_version, i.last_scanned_at
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')
+                 AND (
+                     %s = 'all'
+                     OR (%s = 'scanned' AND i.last_scanned_at IS NOT NULL)
+                     OR (%s = 'unscanned' AND i.last_scanned_at IS NULL)
+                     OR (%s = 'needs_attention' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70)
+                 )
+                 AND (
+                     %s = ''
+                     OR p.post_title LIKE %s
+                     OR (%d = 1 AND p.ID = %d)
+                 )
+                 ORDER BY
+                   CASE WHEN %s IN ('score_asc','score_desc')
+                       THEN CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END
+                       ELSE 0 END ASC,
+                   CASE WHEN %s = 'score_asc' THEN i.content_health END ASC,
+                   CASE WHEN %s = 'score_desc' THEN i.content_health END DESC,
+                   CASE WHEN %s = 'name_asc' THEN p.post_title END ASC,
+                   CASE WHEN %s = 'name_desc' THEN p.post_title END DESC,
+                   CASE WHEN %s IN ('score_asc','score_desc') THEN p.post_title END ASC,
+                   CASE WHEN %s = 'id_asc' THEN p.ID END ASC,
+                   p.ID ASC
+                 LIMIT %d OFFSET %d",
+                $listBindings
+            ),
             ARRAY_A
         );
 
