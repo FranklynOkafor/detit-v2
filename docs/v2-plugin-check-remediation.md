@@ -108,6 +108,17 @@ V1's direct Gemini API-key setting is *not* the V2 WordPress AI Client configura
 
 **Remaining before publication:** run the official WordPress.org readme validator on the final readme; build and inspect the exact final ZIP; check WordPress.org SVN trunk/tag content locally before committing. SVN publishing, merging the draft PR, or tagging the public release require explicit owner authorization.
 
+## November 11 — official WordPress.org readme validator notes
+
+The owner reports four **non-blocking validator notes**:
+
+1. `product audit` is not a commonly used WordPress.org tag. Removed it from `Tags:` to keep discoverability tags accurate and useful.
+2. `== Upgrade Notice ==` is absent. Added a `2.0.0` upgrade notice explaining the V1 Gemini → V2 WordPress AI Client change, PHP 8.1 minimum, backup and provider reconfiguration.
+3. `== Screenshots ==` is absent. **Intentionally not fabricating screenshot captions or media**. If images are added before or after release, use genuine clean screenshots named `screenshot-1.png`, etc. and place them in WordPress.org **SVN root `assets/`** (not the release ZIP plugin `assets/`). Add matching numbered captions to readme at the same time. This note does not block publishing.
+4. No donate link. Official Plugin Handbook says `Donate link:` is **optional**; leave omitted because the project has not provided a genuine donation destination.
+
+WordPress guidance: https://developer.wordpress.org/plugins/wordpress-org/how-your-readme-txt-works/ and https://developer.wordpress.org/plugins/wordpress-org/plugin-assets/. Rerun the validator after pulling the updated readme, but do not force a false link or non-existent images to eliminate informational notes.
+
 ## Final regression gates
 
 - [x] Updated ZIP installs/replaces the existing plugin without fatal errors (user-reported same-version replacement on test-site).
