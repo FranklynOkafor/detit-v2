@@ -53,7 +53,7 @@ try {
     $check('README_TESTED_UP_TO_PRESENT', preg_match($testedUpToPattern, $readme) === 1);
     $check('README_TESTED_UP_TO_WINDOWS_CRLF', preg_match(
         $testedUpToPattern,
-        str_replace(["\r\n", "\n"], "\r\n", $readme)
+        str_replace("\n", "\r\n", str_replace("\r\n", "\n", $readme))
     ) === 1);
     $check('NO_NONEXISTENT_DOMAIN_PATH', stripos($plugin, 'Domain Path: languages') === false);
     $check('MANUAL_TRANSLATION_LOADER_REMOVED', ! str_contains($bootstrap, 'load_plugin_textdomain('));
@@ -84,8 +84,8 @@ try {
     $check('DASHBOARD_EXPLICIT_PREPARE_VALUES',
         ! str_contains($dashboard, '$bindings')
         && ! str_contains($dashboard, '$listBindings')
-        && str_contains($dashboard, '$numericId' . "\n")
-        && str_contains($dashboard, '$offset' . "\n"));
+        && preg_match('/\\$numericId\\s*\\)/', $dashboard) === 1
+        && preg_match('/\\$offset\\s*\\)/', $dashboard) === 1);
     $check('REPOSITORY_IDENTIFIERS_PREPARED', ! str_contains(
         $generation . $index . $runs . $runItems,
         '{$this->table}'
