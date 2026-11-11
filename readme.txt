@@ -54,6 +54,10 @@ DetIt stores audit results and generation/apply history in the site's own WordPr
 
 For new installations on WordPress 7.0 or newer, the WordPress AI Client API is part of WordPress core. Older versions require a separately installed compatible AI Client implementation.
 
+**Upgrading from DetIt 1.0**
+
+DetIt V2.0 changes AI generation from the plugin's built-in Gemini API-key setting to the WordPress AI Client. Your previous DetIt 1.0 Gemini API key does not automatically configure the new connection. After updating, set up a compatible AI provider through WordPress and verify that generation is available. Back up your WordPress site and database before updating. DetIt V2.0 requires PHP 8.1 or newer.
+
 == Frequently Asked Questions ==
 
 = Does DetIt charge me to audit products? =
@@ -93,3 +97,6 @@ Use the [DetIt GitHub issue tracker](https://github.com/FranklynOkafor/detit-v2/
 * Product completeness scoring, issue detection, and source-change detection.
 * Searchable Content Health dashboard and manual individual, selected, or batch audits.
 * No image-aware generation, scheduled generation, or premium functions in this release.
+
+= 1.0 =
+* Original public release with built-in Google Gemini API-key configuration.
