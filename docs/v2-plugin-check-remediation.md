@@ -60,6 +60,19 @@ The official Plugin Check report from `test-site` generated **2026-11-09 22:53:2
 
 **Important:** The explicit placeholder rewrite has not yet been validated by a fresh official Plugin Check. The user's next steps are to pull, run both the release static smoke and the three dashboard regression suites, rebuild the ZIP, replace the test-site plugin, and rerun Plugin Check. We expect only the 15 reviewed database/uninstall warnings, but **do not claim this until the official scan confirms it**.
 
+## November 11 — clean Plugin Check ERROR result
+
+The latest WordPress Plugin Check export from the separate LocalWP `test-site`, generated **2026-11-11 10:55:44**, shows **0 ERROR and 15 WARNING**. This is down from the original 115 errors and 70 warnings (185 findings). Both `ReplacementsWrongNumber` warnings are now gone after changing array replacement values to explicit individual arguments in WPDB prepared statements.
+
+**Remaining warnings — reviewed, not unconditionally waived:**
+
+- **14** custom SQL read warnings, consisting of seven `WordPress.DB.DirectDatabaseQuery.DirectQuery` and seven `WordPress.DB.DirectDatabaseQuery.NoCaching` notices. All are in `GenerationRepository`, `ProductIndexRepository`, `RunItemRepository`, and `RunRepository`. These are DetIt-owned database tables (not the core posts or WooCommerce orders tables), and the SQL reads use WPDB prepared queries with `%i` identifiers and `%d` IDs. A caching implementation would require comprehensive invalidation on save/update/undo; an incorrect cache risks stale history and inaccurate audit state. Keep these as documented warnings for now. Revisit caching if profiling shows a real performance problem.
+- **1** intentional `SchemaChange` warning in `uninstall.php`, which drops only DetIt's four owned audit/history tables after WordPress invokes plugin uninstall. This is not an activation or ordinary deactivation path. Merchant product content is untouched. Confirm the end-user uninstall/deletion disclosure is prominently clear.
+
+**Release status:** Official Plugin Check currently shows zero errors, but this does not equal WordPress.org approval. The WordPress.org Plugin Check project explains that its checks do not replace manual review and that the Plugin repo category must normally pass; some additional warnings can remain after review. Source: https://wordpress.org/plugins/plugin-check/
+
+**Still to verify before tagging/releasing:** development-side release smoke plus the 3 dashboard SQL regression suites after the last query change; Generate → Preview → Apply → Undo on latest built ZIP; settings persistence on replacing an existing installation; readme validator/compatibility and directory submission details. Keep PR #7 draft until acceptance.
+
 ## Final regression gates
 
 - [ ] Updated ZIP installs/replaces the existing plugin without fatal errors.
