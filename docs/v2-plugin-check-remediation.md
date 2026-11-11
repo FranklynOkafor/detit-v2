@@ -81,6 +81,25 @@ The user separately reports **Generate → Preview → selective Apply → Undo 
 
 **Submission preparation outstanding:** Confirm the author's exact **WordPress.org username** and add a `Contributors:` readme header. Run the WordPress.org readme validator, perform a final ZIP/package/file review, verify `WP_DEBUG` behavior as appropriate, and maintain the PR as draft until explicit release approval. WordPress.org readme guideline: https://developer.wordpress.org/plugins/wordpress-org/how-your-readme-txt-works/ ; submission guidance: https://developer.wordpress.org/plugins/wordpress-org/plugin-developer-faq/
 
+## Existing WordPress.org plugin — V1 to V2 upgrade is the release path
+
+**Corrected release plan (verified Nov 11, 2026):** This is **not** a new plugin submission. The public listing is already live at https://wordpress.org/plugins/detit-product-content-generator-for-woocommerce/ and currently publishes **version 1.0**. The verified WordPress.org owner profile is **Franklyn Okafor / `emeka002`** (https://profiles.wordpress.org/emeka002/). The V2 `readme.txt` now identifies `Contributors: emeka002`, with `Stable tag: 2.0.0` and `Tested up to: 7.1`.
+
+Because this is an *existing WordPress.org plugin*, the release will eventually require updating its assigned **SVN** repository, with finished release files directly inside `trunk/`, creating `tags/2.0.0/`, and aligning `trunk/readme.txt` stable tag. Do **not** submit a new plugin, send a ZIP through the new-plugin application, merge, tag or push SVN until final owner approval. References:
+- https://developer.wordpress.org/plugins/wordpress-org/how-to-use-subversion/
+- https://developer.wordpress.org/plugins/wordpress-org/plugin-developer-faq/
+
+**Important untested path:** All successful data-retention tests so far replaced a **V2.0 ZIP over an existing V2.0 installation**, which does **not** prove a live V1.0 site can upgrade cleanly to V2.0. V1.0 used its own Google Gemini API-key settings whereas V2.0 uses the WordPress AI Client and a separately configured provider. An actual V1.0 → V2.0 upgrade may change AI-provider setup and old data/option behavior. Treat this as a major compatibility gate:
+
+1. On a *new disposable LocalWP site*, install the current public **V1.0** from WordPress.org and activate WooCommerce.
+2. Save sample V1 store settings, note AI connection configuration (never paste or upload API secrets), and record a sample WooCommerce product plus any existing DetIt data.
+3. Back up the site and database; replace V1.0 with the latest V2.0 release ZIP **using the exact same canonical plugin slug/directory**, without uninstalling.
+4. Confirm no fatal errors, only one active DetIt, correct version shown, product contents unchanged, Brand Profile and Content Health operational, V2 AI provider can be configured and generation works.
+5. Explicitly document any V1 settings or history that are no longer used or cannot migrate. Provide an upgrade notice and safe reconfiguration steps if needed; do not claim automatic migration unless verified.
+6. Validate the complete V2 readme at https://wordpress.org/plugins/developers/readme-validator/, and verify all release files/ZIP under WordPress.org packaging limits.
+
+**Status:** The *V2 same-version replacement* and WordPress 7.1.4 acceptance are PASS; **V1→V2 compatibility is still UNTESTED**. The release PR remains draft/unmerged.
+
 ## Final regression gates
 
 - [x] Updated ZIP installs/replaces the existing plugin without fatal errors (user-reported same-version replacement on test-site).
