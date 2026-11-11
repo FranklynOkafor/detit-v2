@@ -1,6 +1,6 @@
 === DetIt AI Content Generator for WooCommerce ===
 Contributors: emeka002
-Tags: woocommerce, ai, product descriptions, product audit, content
+Tags: woocommerce, ai, product descriptions, content
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
@@ -87,6 +87,11 @@ Product content already applied to WooCommerce remains in the product. DetIt's o
 = Where do I report problems? =
 
 Use the [DetIt GitHub issue tracker](https://github.com/FranklynOkafor/detit-v2/issues).
+
+== Upgrade Notice ==
+
+= 2.0.0 =
+Major upgrade from 1.0: DetIt now uses the WordPress AI Client rather than the built-in Gemini API key. Back up your site, confirm PHP 8.1+, and reconnect a compatible AI provider after updating.
 
 == Changelog ==
 
