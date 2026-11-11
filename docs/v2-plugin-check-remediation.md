@@ -73,14 +73,22 @@ The latest WordPress Plugin Check export from the separate LocalWP `test-site`, 
 
 **Still to verify before tagging/releasing:** development-side release smoke plus the 3 dashboard SQL regression suites after the last query change; Generate → Preview → Apply → Undo on latest built ZIP; settings persistence on replacing an existing installation; readme validator/compatibility and directory submission details. Keep PR #7 draft until acceptance.
 
+## November 11 — upgrade persistence and WordPress 7.1.4 acceptance
+
+The user confirms that the latest release ZIP was **replaced over the existing DetIt installation** on separate LocalWP `test-site`, **without uninstalling**, and that the Content Health data remained unchanged afterward. The screenshot after replacement shows product **Merlins Girdle (#19)** at **75/100**, audit status **Current**, four existing issues, and **last scan 2026-11-11 11:56**; all remained unchanged after ZIP replacement. A previous screenshot also confirmed the saved Brand Profile is populated and the user reports those values persisted. Therefore **same-version replacement/audit/Brand Profile persistence PASS**. This does not yet prove migrations between different plugin/database versions, nor a generation-history database record comparison.
+
+The user separately reports **Generate → Preview → selective Apply → Undo PASS** through the latest test installation, and the four development LocalWP smoke suites **PASS**. WordPress version on `test-site` is confirmed **7.1.4**, appropriately covered by `Tested up to: 7.1`.
+
+**Submission preparation outstanding:** Confirm the author's exact **WordPress.org username** and add a `Contributors:` readme header. Run the WordPress.org readme validator, perform a final ZIP/package/file review, verify `WP_DEBUG` behavior as appropriate, and maintain the PR as draft until explicit release approval. WordPress.org readme guideline: https://developer.wordpress.org/plugins/wordpress-org/how-your-readme-txt-works/ ; submission guidance: https://developer.wordpress.org/plugins/wordpress-org/plugin-developer-faq/
+
 ## Final regression gates
 
-- [ ] Updated ZIP installs/replaces the existing plugin without fatal errors.
-- [ ] Brand Profile settings remain unchanged.
-- [ ] Health dashboard loads, with accurate totals, search, sort, selected scan and rescans.
-- [ ] Stale source detection still works.
-- [ ] Generate → Preview → selective Apply → Refresh → Undo works on a disposable product.
-- [ ] No unaddressed Plugin Check **ERROR** remains.
-- [ ] Any remaining warnings are reviewed individually for security and directory policy.
-- [ ] Confirm actual WordPress version on Area 51 (`wp core version`) supports the readme `Tested up to: 7.1` claim; adjust if not.
+- [x] Updated ZIP installs/replaces the existing plugin without fatal errors (user-reported same-version replacement on test-site).
+- [x] Brand Profile settings remain unchanged on same-version ZIP replacement (user confirmation).
+- [x] Health dashboard loads, with totals, search, sort and scan regression suites PASS; actual scanned audit retained across ZIP replacement.
+- [x] Stale source detection still works (Stages 62–63 smoke PASS).
+- [x] Generate → Preview → selective Apply → Refresh → Undo works on a disposable product (user-reported UI PASS).
+- [x] No unaddressed Plugin Check **ERROR** remains (Nov 11, 0 ERROR).
+- [x] Any remaining warnings are reviewed individually for security and directory policy (15 documented).
+- [x] Confirm actual WordPress version on final test-site is 7.1.4, supporting readme `Tested up to: 7.1`.
 - [ ] PR #7 remains draft and unpublished until owner signs off.
