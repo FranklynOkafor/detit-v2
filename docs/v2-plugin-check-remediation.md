@@ -100,6 +100,14 @@ Because this is an *existing WordPress.org plugin*, the release will eventually 
 
 **Status:** The *V2 same-version replacement* and WordPress 7.1.4 acceptance are PASS; **V1→V2 compatibility is still UNTESTED**. The release PR remains draft/unmerged.
 
+## November 11 — V1.0 to V2.0 post-upgrade verification confirmed
+
+The owner additionally confirms that all post-upgrade checks on the disposable `detit-v1-upgrade-test` LocalWP site **passed**, following the earlier WordPress screenshot showing that its installed **DetIt V1.0** was successfully replaced by **V2.0.0** using the canonical same-slug WordPress update flow. Confirmation covers one active V2 install, normal WordPress/admin operation, existing WooCommerce product content, Brand Profile, Content Health dashboard, and a test audit. This closes the **V1→V2 basic upgrade compatibility gate**.
+
+V1's direct Gemini API-key setting is *not* the V2 WordPress AI Client configuration, so reconfiguring a compatible provider is an intentional change documented in V2 `readme.txt`. V2 generation separately passed Generate → Preview → selective Apply → Undo in test-site. This does **not** assert that V1 legacy settings/API-key records migrate to V2.
+
+**Remaining before publication:** run the official WordPress.org readme validator on the final readme; build and inspect the exact final ZIP; check WordPress.org SVN trunk/tag content locally before committing. SVN publishing, merging the draft PR, or tagging the public release require explicit owner authorization.
+
 ## Final regression gates
 
 - [x] Updated ZIP installs/replaces the existing plugin without fatal errors (user-reported same-version replacement on test-site).
