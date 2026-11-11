@@ -1,4 +1,5 @@
 === DetIt AI Content Generator for WooCommerce ===
+Contributors: emeka002
 Tags: woocommerce, ai, product descriptions, product audit, content
 Requires at least: 6.5
 Tested up to: 7.1
