@@ -50,11 +50,11 @@ final class ProductSummaryAbility
             [
                 'label' => __(
                     'DetIt Catalog',
-                    self::TEXT_DOMAIN
+                    'detit-product-content-generator-for-woocommerce'
                 ),
                 'description' => __(
                     'Read-only catalog information provided by DetIt.',
-                    self::TEXT_DOMAIN
+                    'detit-product-content-generator-for-woocommerce'
                 ),
             ]
         );
@@ -67,12 +67,11 @@ final class ProductSummaryAbility
             [
                 'label' => __(
                     'Get WooCommerce Product Summary',
-                    self::TEXT_DOMAIN
+                    'detit-product-content-generator-for-woocommerce'
                 ),
                 'description' => __(
-                    'Return a read-only summary of a WooCommerce product. '
-                    . 'Requires permission to manage WooCommerce and edit the product.',
-                    self::TEXT_DOMAIN
+                    'Return a read-only summary of a WooCommerce product. Requires permission to manage WooCommerce and edit the product.',
+                    'detit-product-content-generator-for-woocommerce'
                 ),
                 'category' => self::CATEGORY,
                 'input_schema' => [
@@ -169,7 +168,7 @@ final class ProductSummaryAbility
         if (! $this->canRead($input)) {
             return new \WP_Error(
                 'detit_ability_permission_denied',
-                __('You cannot access this product summary.', self::TEXT_DOMAIN)
+                __('You cannot access this product summary.', 'detit-product-content-generator-for-woocommerce')
             );
         }
 
@@ -178,7 +177,7 @@ final class ProductSummaryAbility
         if ($context === null) {
             return new \WP_Error(
                 'detit_ability_product_unavailable',
-                __('This product is unavailable.', self::TEXT_DOMAIN)
+                __('This product is unavailable.', 'detit-product-content-generator-for-woocommerce')
             );
         }
 

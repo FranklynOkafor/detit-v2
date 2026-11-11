@@ -199,6 +199,7 @@ final class GenerateController
             );
         } catch (\Throwable $exception) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- WP_DEBUG-only diagnostic; no output to visitors.
                 error_log(
                     '[DetIt GenerateController] '
                         . $exception->getMessage()
