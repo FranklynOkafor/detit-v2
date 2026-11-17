@@ -22,11 +22,14 @@ class ProductIndexRepository
 
     public function findByProduct(int $productId): ?array
     {
-        $row = $this->wpdb->get_row(
-            $this->wpdb->prepare(
+        $wpdb = $this->wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
+                FROM %i
                 WHERE product_id = %d",
+                $this->table,
                 $productId
             ),
             ARRAY_A
@@ -58,6 +61,7 @@ class ProductIndexRepository
             'content_health',
             'issue_flags',
             'source_hash',
+            'rules_version',
             'last_scanned_at',
             'last_optimized_at',
         ];
@@ -82,6 +86,7 @@ class ProductIndexRepository
                     'content_health'   => 0,
                     'issue_flags'      => '[]',
                     'source_hash'      => '',
+                    'rules_version'    => '',
                     'last_scanned_at'  => null,
                     'last_optimized_at' => null,
                 ],

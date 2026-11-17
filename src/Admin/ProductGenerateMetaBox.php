@@ -4,6 +4,7 @@ namespace DetIt\Admin;
 
 use DetIt\Storage\GenerationRepository;
 use WP_Post;
+use DetIt\AI\WordPressAIClientGateway;
 
 if (! defined('ABSPATH')) {
     exit;
@@ -61,9 +62,14 @@ final class ProductGenerateMetaBox
             return;
         }
 
-        $productId = isset($_GET['post'])
-            ? absint(wp_unslash($_GET['post']))
-            : 0;
+        // Read-only GET product ID selects the editor's current product.
+        // No state changes occur here; REST apply uses separate authorization.
+        // No form is submitted or product content changed here: this reads
+        // the currently opened WooCommerce product editor's GET post ID.
+        // The later Generate/Apply REST actions enforce their own permissions
+        // and nonces, so adding a nonce to this URL lookup is inappropriate.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin product editor URL.
+        $productId = isset($_GET['post']) ? absint(wp_unslash($_GET['post'])) : 0;
 
         if ($productId <= 0 || ! function_exists('wc_get_product')) {
             return;
@@ -165,6 +171,25 @@ final class ProductGenerateMetaBox
 
     public function render(WP_Post $post): void
     {
+        $imageInputSupported = (
+            new WordPressAIClientGateway()
+        )->supportsImageInput();
+
+        // Language and tone belong to the merchant's saved store profile.
+        // The modal starts with these preferences but allows a per-product
+        // edit without modifying the permanent Brand Profile option.
+        $brandProfile = get_option('detit_brand_profile', []);
+        $brandProfile = is_array($brandProfile) ? $brandProfile : [];
+
+        $savedLanguage = isset($brandProfile['language_variant'])
+            && is_scalar($brandProfile['language_variant'])
+            ? sanitize_text_field((string) $brandProfile['language_variant'])
+            : '';
+
+        $savedTone = isset($brandProfile['tone'])
+            && is_scalar($brandProfile['tone'])
+            ? sanitize_text_field((string) $brandProfile['tone'])
+            : '';
 ?>
         <div class="detit-generate-panel">
 
@@ -343,7 +368,7 @@ final class ProductGenerateMetaBox
                                     checked>
                                 <?php
                                 esc_html_e(
-                                    'Meta description',
+                                    'SEO meta description (preview only)',
                                     'detit-product-content-generator-for-woocommerce'
                                 );
                                 ?>
@@ -364,6 +389,58 @@ final class ProductGenerateMetaBox
                             </label>
 
                         </fieldset>
+
+                        <fieldset class="detit-field-group">
+
+                            <legend>
+                                <?php
+                                esc_html_e(
+                                    'Product image understanding',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </legend>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    id="detit-use-image-context"
+                                    disabled>
+
+                                <?php
+                                esc_html_e(
+                                    'Use product image as AI context',
+                                    'detit-product-content-generator-for-woocommerce'
+                                );
+                                ?>
+                            </label>
+
+                            <p class="description" id="detit-image-capability-note">
+
+                                <?php if ($imageInputSupported): ?>
+
+                                    <?php
+                                    esc_html_e(
+                                        'Image understanding is supported. Image-aware generation will be enabled in a later stage.',
+                                        'detit-product-content-generator-for-woocommerce'
+                                    );
+                                    ?>
+
+                                <?php else: ?>
+
+                                    <?php
+                                    esc_html_e(
+                                        'Image understanding is unavailable with the current AI configuration. Text generation remains available.',
+                                        'detit-product-content-generator-for-woocommerce'
+                                    );
+                                    ?>
+
+                                <?php endif; ?>
+
+                            </p>
+
+                        </fieldset>
+
 
                         <div class="detit-form-field">
 
@@ -415,6 +492,7 @@ final class ProductGenerateMetaBox
                             <input
                                 type="text"
                                 id="detit-language"
+                                value="<?php echo esc_attr($savedLanguage); ?>"
                                 placeholder="<?php
                                                 echo esc_attr__(
                                                     'e.g. English (Nigeria)',
@@ -438,12 +516,20 @@ final class ProductGenerateMetaBox
                             <input
                                 type="text"
                                 id="detit-tone"
+                                value="<?php echo esc_attr($savedTone); ?>"
                                 placeholder="<?php
                                                 echo esc_attr__(
                                                     'e.g. Professional',
                                                     'detit-product-content-generator-for-woocommerce'
                                                 );
                                                 ?>">
+
+                            <p class="description">
+                                <?php esc_html_e(
+                                    'Language and tone are prefilled from your saved DetIt Brand Profile. You can change them for this generation without changing your store settings.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                ); ?>
+                            </p>
 
                         </div>
 
@@ -467,6 +553,13 @@ final class ProductGenerateMetaBox
                                                     'detit-product-content-generator-for-woocommerce'
                                                 );
                                                 ?>"></textarea>
+
+                            <p class="description">
+                                <?php esc_html_e(
+                                    'For stronger, search-friendly descriptions, add verified product specifications, materials, size or use details to the product record or here. DetIt will not invent facts just to make text longer.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                ); ?>
+                            </p>
 
                         </div>
 

@@ -3,9 +3,12 @@
 namespace DetIt;
 
 use DetIt\Admin\Menu;
+use DetIt\Abilities\ProductSummaryAbility;
+use DetIt\Abilities\ProductIssuesAbility;
 use DetIt\Storage\DatabaseInstaller;
 use DetIt\Admin\BrandProfileSettingsPage;
 use DetIt\Admin\ProductGenerateMetaBox;
+use DetIt\Admin\ContentHealthPage;
 
 use DetIt\REST\GenerateController;
 use DetIt\REST\ApplyController;
@@ -19,9 +22,6 @@ class Plugin
 {
 	public function init(): void
 	{
-		// Load translations.
-		add_action('init', [$this, 'loadTextDomain']);
-
 		// Admin features.
 		$this->bootAdmin();
 
@@ -33,18 +33,10 @@ class Plugin
 		$this->bootQueue();
 	}
 
-	public function loadTextDomain(): void
-	{
-		load_plugin_textdomain(
-			'detit-product-content-generator-for-woocommerce',
-			false,
-			dirname(plugin_basename(DETIT_FILE)) . '/languages'
-		);
-	}
-
 	private function bootAdmin(): void
 	{
 		(new Menu())->registerHooks();
+		(new ContentHealthPage())->registerHooks();
 		if (is_admin()) {
 			(new BrandProfileSettingsPage())->register();
 		}
@@ -78,7 +70,9 @@ class Plugin
 
 	private function bootAbilities(): void
 	{
-		// Stage 56.
+		// WordPress 6.9+ registers read-only abilities. Older WP keeps working.
+		(new ProductSummaryAbility())->registerHooks();
+		(new ProductIssuesAbility())->registerHooks();
 	}
 
 	private function bootQueue(): void

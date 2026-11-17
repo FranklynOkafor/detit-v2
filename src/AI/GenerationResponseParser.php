@@ -35,7 +35,7 @@ final class GenerationResponseParser
             throw new \InvalidArgumentException(
                 'The AI response contains invalid JSON.',
                 0,
-                $exception
+                $exception // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Previous exception object, not output.
             );
         }
 
@@ -54,7 +54,7 @@ final class GenerationResponseParser
             throw new \InvalidArgumentException(
                 'The AI response does not match the expected output schema.',
                 0,
-                $exception
+                $exception // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Previous exception object, not output.
             );
         }
     }

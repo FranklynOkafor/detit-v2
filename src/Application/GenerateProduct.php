@@ -184,7 +184,8 @@ final class GenerateProduct
          */
         return $this->responseHandler->handle(
             $generationRequest,
-            $selectedFields
+            $selectedFields,
+            $factSheet
         );
     }
 }

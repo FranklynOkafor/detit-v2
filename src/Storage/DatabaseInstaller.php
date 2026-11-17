@@ -131,6 +131,7 @@ class DatabaseInstaller
     content_health tinyint(3) unsigned NOT NULL DEFAULT 0,
     issue_flags longtext NOT NULL,
     source_hash char(64) NOT NULL DEFAULT '',
+    rules_version varchar(20) NOT NULL DEFAULT '',
     last_scanned_at datetime NULL DEFAULT NULL,
     last_optimized_at datetime NULL DEFAULT NULL,
     PRIMARY KEY  (id),
