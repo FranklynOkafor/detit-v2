@@ -63,57 +63,84 @@ final class ContentHealthDashboardRepository
 
         $table = $wpdb->prefix . 'detit_product_index';
 
-        // Every filter comes from a fixed local allowlist, not raw user SQL.
-        $where = "p.post_type = 'product'
-            AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')";
+        // Every input below is a value bound through WPDB placeholders.
+        // The query text itself remains a PHP string literal, so the
+        // WordPress security scanner can verify its construction.
+        //
+        // This avoids interpolating dynamic WHERE and ORDER BY SQL, even
+        // when those fragments were previously built from safe allowlists.
+        $like = '%' . $wpdb->esc_like($search) . '%';
+        $numericSearch = ctype_digit($search) ? 1 : 0;
+        $numericId = $numericSearch === 1 ? (int) $search : 0;
 
-        if ($filter === 'scanned') {
-            $where .= ' AND i.last_scanned_at IS NOT NULL';
-        } elseif ($filter === 'unscanned') {
-            $where .= ' AND i.last_scanned_at IS NULL';
-        } elseif ($filter === 'needs_attention') {
-            $where .= ' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70';
-        }
+        // Keep placeholder arguments explicit in each query. Although
+        // wpdb::prepare() accepts a single array of replacements, the
+        // WordPress Plugin Check scanner counts that as one argument.
+        // Matching each literal placeholder with one argument also makes
+        // the SQL reviewable without having to trace array construction.
 
-        // Apply search before COUNT and LIMIT, so it covers the full catalog
-        // and all pages rather than filtering just the displayed 20 rows.
-        if ($search !== '') {
-            $like = '%' . $wpdb->esc_like($search) . '%';
+        // Totals must describe the entire catalog, ignoring active view
+        // filters and pagination, just as the earlier dashboard did.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only live audit totals.
+        $totals = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT
+                    COUNT(*) AS products,
+                    SUM(CASE WHEN i.last_scanned_at IS NOT NULL THEN 1 ELSE 0 END) AS scanned,
+                    SUM(CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END) AS unscanned,
+                    SUM(CASE WHEN i.last_scanned_at IS NOT NULL
+                        AND i.content_health < 70 THEN 1 ELSE 0 END) AS needs_attention
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')",
+                $wpdb->posts,
+                $table,
+                'product'
+            ),
+            ARRAY_A
+        );
 
-            if (ctype_digit($search)) {
-                $where .= $wpdb->prepare(
-                    ' AND (p.post_title LIKE %s OR p.ID = %d)',
-                    $like,
-                    (int) $search
-                );
-            } else {
-                $where .= $wpdb->prepare(' AND p.post_title LIKE %s', $like);
-            }
-        }
-
-        $orderBy = self::SORTS[$sort];
-
-        $from = "FROM {$wpdb->posts} p
-            LEFT JOIN {$table} i ON i.product_id = p.ID";
-
-        $totalsSql = "SELECT
-                COUNT(*) AS products,
-                SUM(CASE WHEN i.last_scanned_at IS NOT NULL THEN 1 ELSE 0 END) AS scanned,
-                SUM(CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END) AS unscanned,
-                SUM(CASE WHEN i.last_scanned_at IS NOT NULL
-                    AND i.content_health < 70 THEN 1 ELSE 0 END) AS needs_attention
-            {$from}
-            WHERE p.post_type = 'product'
-            AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')";
-
-        $totals = $wpdb->get_row($totalsSql, ARRAY_A);
         if (! is_array($totals) || $wpdb->last_error !== '') {
             return new \WP_Error('detit_health_query_failed', 'Unable to read audit summary.');
         }
 
+        // The four filter comparisons are mutually exclusive because the
+        // requested filter is validated against FILTERS earlier.
+        // Searches by title always work; all-digit searches also match ID.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Current filtered catalog count.
         $count = (int) $wpdb->get_var(
-            "SELECT COUNT(*) {$from} WHERE {$where}"
+            $wpdb->prepare(
+                "SELECT COUNT(*)
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')
+                 AND (
+                     %s = 'all'
+                     OR (%s = 'scanned' AND i.last_scanned_at IS NOT NULL)
+                     OR (%s = 'unscanned' AND i.last_scanned_at IS NULL)
+                     OR (%s = 'needs_attention' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70)
+                 )
+                 AND (
+                     %s = ''
+                     OR p.post_title LIKE %s
+                     OR (%d = 1 AND p.ID = %d)
+                 )",
+                $wpdb->posts,
+                $table,
+                'product',
+                $filter,
+                $filter,
+                $filter,
+                $filter,
+                $search,
+                $like,
+                $numericSearch,
+                $numericId
+            )
         );
+
         if ($wpdb->last_error !== '') {
             return new \WP_Error('detit_health_query_failed', 'Unable to count audit rows.');
         }
@@ -122,15 +149,61 @@ final class ContentHealthDashboardRepository
         $page = min($page, $pages);
         $offset = ($page - 1) * self::PAGE_SIZE;
 
+        // ORDER BY uses prepared sort *values*, never appended SQL.
+        // CASE expressions preserve our five existing sort semantics:
+        // product ID, A-Z, Z-A, score low-high and score high-low.
+        // Unscanned products are last when sorting by score.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Fresh audit results are required.
         $raw = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.ID AS product_id, p.post_title AS title,
                     i.content_health, i.issue_flags, i.source_hash,
                     i.rules_version, i.last_scanned_at
-                 {$from}
-                 WHERE {$where}
-                 ORDER BY {$orderBy}
+                 FROM %i p
+                 LEFT JOIN %i i ON i.product_id = p.ID
+                 WHERE p.post_type = %s
+                 AND p.post_status IN ('publish', 'private', 'draft', 'pending', 'future')
+                 AND (
+                     %s = 'all'
+                     OR (%s = 'scanned' AND i.last_scanned_at IS NOT NULL)
+                     OR (%s = 'unscanned' AND i.last_scanned_at IS NULL)
+                     OR (%s = 'needs_attention' AND i.last_scanned_at IS NOT NULL AND i.content_health < 70)
+                 )
+                 AND (
+                     %s = ''
+                     OR p.post_title LIKE %s
+                     OR (%d = 1 AND p.ID = %d)
+                 )
+                 ORDER BY
+                   CASE WHEN %s IN ('score_asc','score_desc')
+                       THEN CASE WHEN i.last_scanned_at IS NULL THEN 1 ELSE 0 END
+                       ELSE 0 END ASC,
+                   CASE WHEN %s = 'score_asc' THEN i.content_health END ASC,
+                   CASE WHEN %s = 'score_desc' THEN i.content_health END DESC,
+                   CASE WHEN %s = 'name_asc' THEN p.post_title END ASC,
+                   CASE WHEN %s = 'name_desc' THEN p.post_title END DESC,
+                   CASE WHEN %s IN ('score_asc','score_desc') THEN p.post_title END ASC,
+                   CASE WHEN %s = 'id_asc' THEN p.ID END ASC,
+                   p.ID ASC
                  LIMIT %d OFFSET %d",
+                $wpdb->posts,
+                $table,
+                'product',
+                $filter,
+                $filter,
+                $filter,
+                $filter,
+                $search,
+                $like,
+                $numericSearch,
+                $numericId,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
+                $sort,
                 self::PAGE_SIZE,
                 $offset
             ),

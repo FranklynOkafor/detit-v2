@@ -45,9 +45,12 @@ class RunItemRepository
 
     public function find(int $itemId): ?array
     {
-        return $this->wpdb->get_row(
-            $this->wpdb->prepare(
-                "SELECT * FROM {$this->table} WHERE id = %d",
+        $wpdb = $this->wpdb;
+
+        return $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM %i WHERE id = %d",
+                $this->table,
                 $itemId
             ),
             ARRAY_A
@@ -56,12 +59,15 @@ class RunItemRepository
 
     public function findByRun(int $runId): array
     {
-        return $this->wpdb->get_results(
-            $this->wpdb->prepare(
+        $wpdb = $this->wpdb;
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
+                FROM %i
                 WHERE run_id = %d
                 ORDER BY id ASC",
+                $this->table,
                 $runId
             ),
             ARRAY_A

@@ -22,11 +22,14 @@ class ProductIndexRepository
 
     public function findByProduct(int $productId): ?array
     {
-        $row = $this->wpdb->get_row(
-            $this->wpdb->prepare(
+        $wpdb = $this->wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
+                FROM %i
                 WHERE product_id = %d",
+                $this->table,
                 $productId
             ),
             ARRAY_A

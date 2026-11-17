@@ -36,8 +36,8 @@ final class ContentHealthPage
     {
         add_submenu_page(
             'woocommerce',
-            __('DetIt Content Health', self::TD),
-            __('DetIt Content Health', self::TD),
+            __('DetIt Content Health', 'detit-product-content-generator-for-woocommerce'),
+            __('DetIt Content Health', 'detit-product-content-generator-for-woocommerce'),
             'manage_woocommerce',
             self::SLUG,
             [$this, 'renderPage']
@@ -50,7 +50,7 @@ final class ContentHealthPage
         check_admin_referer('detit_health_scan_batch');
 
         $rawCursor = isset($_POST['after_product_id'])
-            ? wp_unslash($_POST['after_product_id'])
+            ? sanitize_text_field(wp_unslash($_POST['after_product_id']))
             : '0';
         $cursor = is_scalar($rawCursor)
             ? filter_var((string) $rawCursor, FILTER_VALIDATE_INT, [
@@ -86,7 +86,7 @@ final class ContentHealthPage
         check_admin_referer('detit_health_scan_selected');
 
         $raw = isset($_POST['product_ids'])
-            ? wp_unslash($_POST['product_ids'])
+            ? map_deep(wp_unslash($_POST['product_ids']), 'sanitize_text_field')
             : [];
 
         $ids = self::parseSelectedIds($raw);
@@ -180,6 +180,10 @@ final class ContentHealthPage
         ]));
     }
 
+    // Read-only GET parameters control sorting, filtering and pagination.
+    // No product/audit writes are made by this method, so an admin nonce
+    // would block normal bookmarkable filter links unnecessarily.
+    // phpcs:disable WordPress.Security.NonceVerification.Recommended
     public function renderPage(): void
     {
         $this->requirePermission();
@@ -198,10 +202,10 @@ final class ContentHealthPage
         $data = (new ContentHealthDashboardRepository())->browse($filter, $page, $search, $sort);
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('DetIt Content Health', self::TD); ?></h1>
+            <h1><?php esc_html_e('DetIt Content Health', 'detit-product-content-generator-for-woocommerce'); ?></h1>
             <p><?php esc_html_e(
                 'A catalog completeness audit, not an SEO performance rating. Audits never change product content or use AI credits.',
-                self::TD
+                'detit-product-content-generator-for-woocommerce'
             ); ?></p>
 
             <div id="detit-feedback" role="status">
@@ -214,9 +218,10 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
+                        /* translators: 1: all products, 2: scanned, 3: unscanned, 4: products below score 70. */
                         esc_html__(
                             'Products: %1$d | Scanned: %2$d | Not scanned: %3$d | Below 70: %4$d',
-                            self::TD
+                            'detit-product-content-generator-for-woocommerce'
                         ),
                         (int) $data['totals']['products'],
                         (int) $data['totals']['scanned'],
@@ -228,10 +233,10 @@ final class ContentHealthPage
 
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0;">
                     <?php foreach ([
-                        'all' => __('All products', self::TD),
-                        'scanned' => __('Scanned', self::TD),
-                        'unscanned' => __('Not scanned', self::TD),
-                        'needs_attention' => __('Below 70', self::TD),
+                        'all' => __('All products', 'detit-product-content-generator-for-woocommerce'),
+                        'scanned' => __('Scanned', 'detit-product-content-generator-for-woocommerce'),
+                        'unscanned' => __('Not scanned', 'detit-product-content-generator-for-woocommerce'),
+                        'needs_attention' => __('Below 70', 'detit-product-content-generator-for-woocommerce'),
                     ] as $value => $label) : ?>
                         <a href="<?php echo esc_url($this->url([
                             'audit_filter' => $value,
@@ -249,20 +254,20 @@ final class ContentHealthPage
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <input type="hidden" name="audit_filter" value="<?php echo esc_attr($data['filter']); ?>">
 
-                    <label for="detit-product-search"><?php esc_html_e('Search products', self::TD); ?></label>
+                    <label for="detit-product-search"><?php esc_html_e('Search products', 'detit-product-content-generator-for-woocommerce'); ?></label>
                     <input type="search" id="detit-product-search" name="product_search"
                         value="<?php echo esc_attr($data['search']); ?>"
-                        placeholder="<?php esc_attr_e('Product name or ID', self::TD); ?>"
+                        placeholder="<?php esc_attr_e('Product name or ID', 'detit-product-content-generator-for-woocommerce'); ?>"
                         maxlength="120" style="min-width:200px;">
 
-                    <label for="detit-sort-order"><?php esc_html_e('Sort by', self::TD); ?></label>
+                    <label for="detit-sort-order"><?php esc_html_e('Sort by', 'detit-product-content-generator-for-woocommerce'); ?></label>
                     <select id="detit-sort-order" name="sort">
                         <?php foreach ([
-                            'id_asc' => __('Original order (ID)', self::TD),
-                            'score_asc' => __('Score: low to high', self::TD),
-                            'score_desc' => __('Score: high to low', self::TD),
-                            'name_asc' => __('Name: A to Z', self::TD),
-                            'name_desc' => __('Name: Z to A', self::TD),
+                            'id_asc' => __('Original order (ID)', 'detit-product-content-generator-for-woocommerce'),
+                            'score_asc' => __('Score: low to high', 'detit-product-content-generator-for-woocommerce'),
+                            'score_desc' => __('Score: high to low', 'detit-product-content-generator-for-woocommerce'),
+                            'name_asc' => __('Name: A to Z', 'detit-product-content-generator-for-woocommerce'),
+                            'name_desc' => __('Name: Z to A', 'detit-product-content-generator-for-woocommerce'),
                         ] as $sortKey => $sortLabel) : ?>
                             <option value="<?php echo esc_attr($sortKey); ?>"
                                 <?php selected($data['sort'], $sortKey); ?>>
@@ -271,12 +276,12 @@ final class ContentHealthPage
                         <?php endforeach; ?>
                     </select>
 
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Apply', self::TD); ?></button>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Apply', 'detit-product-content-generator-for-woocommerce'); ?></button>
                     <?php if ($data['search'] !== '') : ?>
                         <a href="<?php echo esc_url($this->url([
                             'audit_filter' => $data['filter'],
                             'sort' => $data['sort'],
-                        ])); ?>"><?php esc_html_e('Clear search', self::TD); ?></a>
+                        ])); ?>"><?php esc_html_e('Clear search', 'detit-product-content-generator-for-woocommerce'); ?></a>
                     <?php endif; ?>
                 </form>
 
@@ -287,25 +292,25 @@ final class ContentHealthPage
                     <?php $this->renderViewFields($data); ?>
                     <?php wp_nonce_field('detit_health_scan_selected'); ?>
                     <button type="submit" class="button button-primary">
-                        <?php esc_html_e('Scan selected products', self::TD); ?>
+                        <?php esc_html_e('Scan selected products', 'detit-product-content-generator-for-woocommerce'); ?>
                     </button>
                     <span id="detit-selection-count" class="description" aria-live="polite">
-                        <?php esc_html_e('Select products from this page using the checkboxes below (up to 20).', self::TD); ?>
+                        <?php esc_html_e('Select products from this page using the checkboxes below (up to 20).', 'detit-product-content-generator-for-woocommerce'); ?>
                     </span>
                 </form>
 
                 <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:16px 0;">
-                    <?php $this->batchForm(0, __('Auto-scan: first 10 by ID', self::TD), $data); ?>
+                    <?php $this->batchForm(0, __('Auto-scan: first 10 by ID', 'detit-product-content-generator-for-woocommerce'), $data); ?>
                     <?php
                     $more = isset($_GET['detit_more']) && absint($_GET['detit_more']) === 1;
                     $next = isset($_GET['detit_next']) ? absint($_GET['detit_next']) : 0;
                     if ($more && $next > 0) {
-                        $this->batchForm($next, __('Auto-scan: next 10 by ID', self::TD), $data);
+                        $this->batchForm($next, __('Auto-scan: next 10 by ID', 'detit-product-content-generator-for-woocommerce'), $data);
                     }
                     ?>
                     <span class="description"><?php esc_html_e(
                         'Auto-scan follows product ID order, independent of the search and sort above. Use checkboxes to choose specific products.',
-                        self::TD
+                        'detit-product-content-generator-for-woocommerce'
                     ); ?></span>
                 </div>
 
@@ -313,22 +318,22 @@ final class ContentHealthPage
                     <thead><tr>
                         <th scope="col" style="width:44px;">
                             <label class="screen-reader-text" for="detit-select-all">
-                                <?php esc_html_e('Select all products on this page', self::TD); ?>
+                                <?php esc_html_e('Select all products on this page', 'detit-product-content-generator-for-woocommerce'); ?>
                             </label>
                             <input type="checkbox" id="detit-select-all"
-                                title="<?php esc_attr_e('Select all products on this page', self::TD); ?>"
-                                aria-label="<?php esc_attr_e('Select all products on this page', self::TD); ?>">
+                                title="<?php esc_attr_e('Select all products on this page', 'detit-product-content-generator-for-woocommerce'); ?>"
+                                aria-label="<?php esc_attr_e('Select all products on this page', 'detit-product-content-generator-for-woocommerce'); ?>">
                         </th>
-                        <th scope="col"><?php esc_html_e('Product', self::TD); ?></th>
-                        <th scope="col"><?php esc_html_e('Score', self::TD); ?></th>
-                        <th scope="col"><?php esc_html_e('Audit status', self::TD); ?></th>
-                        <th scope="col"><?php esc_html_e('Issues', self::TD); ?></th>
-                        <th scope="col"><?php esc_html_e('Last scan', self::TD); ?></th>
-                        <th scope="col"><?php esc_html_e('Action', self::TD); ?></th>
+                        <th scope="col"><?php esc_html_e('Product', 'detit-product-content-generator-for-woocommerce'); ?></th>
+                        <th scope="col"><?php esc_html_e('Score', 'detit-product-content-generator-for-woocommerce'); ?></th>
+                        <th scope="col"><?php esc_html_e('Audit status', 'detit-product-content-generator-for-woocommerce'); ?></th>
+                        <th scope="col"><?php esc_html_e('Issues', 'detit-product-content-generator-for-woocommerce'); ?></th>
+                        <th scope="col"><?php esc_html_e('Last scan', 'detit-product-content-generator-for-woocommerce'); ?></th>
+                        <th scope="col"><?php esc_html_e('Action', 'detit-product-content-generator-for-woocommerce'); ?></th>
                     </tr></thead>
                     <tbody>
                     <?php if ($data['products'] === []) : ?>
-                        <tr><td colspan="7"><?php esc_html_e('No matching accessible products.', self::TD); ?></td></tr>
+                        <tr><td colspan="7"><?php esc_html_e('No matching accessible products.', 'detit-product-content-generator-for-woocommerce'); ?></td></tr>
                     <?php else : ?>
                         <?php foreach ($data['products'] as $product) : ?>
                             <tr>
@@ -337,7 +342,8 @@ final class ContentHealthPage
                                         for="detit-select-<?php echo (int) $product['product_id']; ?>">
                                         <?php
                                         printf(
-                                            esc_html__('Select product %d for audit', self::TD),
+                                            /* translators: %d: WooCommerce product ID. */
+                                            esc_html__('Select product %d for audit', 'detit-product-content-generator-for-woocommerce'),
                                             (int) $product['product_id']
                                         );
                                         ?>
@@ -353,7 +359,7 @@ final class ContentHealthPage
                                     $edit = get_edit_post_link($product['product_id'], '');
                                     $title = $product['title'] !== ''
                                         ? $product['title']
-                                        : __('(Untitled product)', self::TD);
+                                        : __('(Untitled product)', 'detit-product-content-generator-for-woocommerce');
                                     ?>
                                     <?php if ($edit) : ?>
                                         <a href="<?php echo esc_url($edit); ?>"><?php echo esc_html($title); ?></a>
@@ -370,10 +376,10 @@ final class ContentHealthPage
                                 <td><?php
                                     echo esc_html(
                                         ! $product['scanned']
-                                            ? __('Not scanned', self::TD)
+                                            ? __('Not scanned', 'detit-product-content-generator-for-woocommerce')
                                             : ($product['stale']
-                                                ? __('Needs rescan', self::TD)
-                                                : __('Current', self::TD))
+                                                ? __('Needs rescan', 'detit-product-content-generator-for-woocommerce')
+                                                : __('Current', 'detit-product-content-generator-for-woocommerce'))
                                     );
                                 ?></td>
                                 <td>
@@ -381,7 +387,7 @@ final class ContentHealthPage
                                     if (! $product['scanned']) {
                                         echo '&mdash;';
                                     } elseif ($product['issues'] === []) {
-                                        esc_html_e('None detected', self::TD);
+                                        esc_html_e('None detected', 'detit-product-content-generator-for-woocommerce');
                                     } else {
                                         $labels = [];
                                         foreach ($product['issues'] as $issue) {
@@ -473,7 +479,8 @@ final class ContentHealthPage
                 <p>
                     <?php
                     printf(
-                        esc_html__('Page %1$d of %2$d · %3$d matching products', self::TD),
+                        /* translators: 1: current page, 2: total pages, 3: products matching filters. */
+                        esc_html__('Page %1$d of %2$d · %3$d matching products', 'detit-product-content-generator-for-woocommerce'),
                         (int) $data['page'],
                         (int) $data['pages'],
                         (int) $data['matched']
@@ -485,7 +492,7 @@ final class ContentHealthPage
                             'product_search' => $data['search'],
                             'sort' => $data['sort'],
                             'paged' => $data['page'] - 1,
-                        ])); ?>"><?php esc_html_e('Previous', self::TD); ?></a>
+                        ])); ?>"><?php esc_html_e('Previous', 'detit-product-content-generator-for-woocommerce'); ?></a>
                     <?php endif; ?>
                     <?php if ($data['page'] < $data['pages']) : ?>
                         <a href="<?php echo esc_url($this->url([
@@ -493,13 +500,15 @@ final class ContentHealthPage
                             'product_search' => $data['search'],
                             'sort' => $data['sort'],
                             'paged' => $data['page'] + 1,
-                        ])); ?>"><?php esc_html_e('Next', self::TD); ?></a>
+                        ])); ?>"><?php esc_html_e('Next', 'detit-product-content-generator-for-woocommerce'); ?></a>
                     <?php endif; ?>
                 </p>
             <?php endif; ?>
         </div>
         <?php
     }
+
+    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     private function batchForm(int $cursor, string $label, array $view): void
     {
@@ -522,7 +531,7 @@ final class ContentHealthPage
             <input type="hidden" name="product_id" value="<?php echo (int) $productId; ?>">
             <?php $this->renderViewFields($view); ?>
             <?php wp_nonce_field('detit_health_scan_product_' . $productId); ?>
-            <button type="submit" class="button"><?php esc_html_e('Rescan', self::TD); ?></button>
+            <button type="submit" class="button"><?php esc_html_e('Rescan', 'detit-product-content-generator-for-woocommerce'); ?></button>
         </form>
         <?php
     }
@@ -547,6 +556,10 @@ final class ContentHealthPage
         }
     }
 
+    // Called only by scanBatch/scanProduct/scanSelected AFTER verifying
+    // each action-specific nonce, and only preserves view parameters.
+    // GET notices only display sanitized result data; no writes occur.
+    // phpcs:disable WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
     private function viewReturnArgs(): array
     {
         $args = [];
@@ -577,14 +590,14 @@ final class ContentHealthPage
                 ? sanitize_key(wp_unslash($_GET['detit_error']))
                 : '';
             $messages = [
-                'detit_selected_missing' => __('Select at least one product to scan.', self::TD),
-                'detit_selected_invalid' => __('Invalid product selection; choose products using the checkboxes.', self::TD),
-                'detit_selected_too_many' => __('Select no more than 25 products per scan.', self::TD),
+                'detit_selected_missing' => __('Select at least one product to scan.', 'detit-product-content-generator-for-woocommerce'),
+                'detit_selected_invalid' => __('Invalid product selection; choose products using the checkboxes.', 'detit-product-content-generator-for-woocommerce'),
+                'detit_selected_too_many' => __('Select no more than 25 products per scan.', 'detit-product-content-generator-for-woocommerce'),
             ];
             echo '<div class="notice notice-error"><p>';
             echo esc_html(
                 $messages[$errorCode]
-                    ?? __('Audit failed. Check permissions and your database connection.', self::TD)
+                    ?? __('Audit failed. Check permissions and your database connection.', 'detit-product-content-generator-for-woocommerce')
             );
             echo '</p></div>';
             return;
@@ -592,7 +605,7 @@ final class ContentHealthPage
 
         if (isset($_GET['detit_product_scanned'])) {
             echo '<div class="notice notice-success"><p>';
-            esc_html_e('Product audit saved.', self::TD);
+            esc_html_e('Product audit saved.', 'detit-product-content-generator-for-woocommerce');
             echo '</p></div>';
             return;
         }
@@ -602,20 +615,23 @@ final class ContentHealthPage
             $failed = isset($_GET['detit_failed']) ? absint($_GET['detit_failed']) : 0;
             echo '<div class="notice notice-info"><p>';
             printf(
-                esc_html__('Batch complete: %1$d audited, %2$d failed.', self::TD),
-                $completed,
-                $failed
+                /* translators: 1: number of products audited, 2: number of audits that failed. */
+                esc_html__('Batch complete: %1$d audited, %2$d failed.', 'detit-product-content-generator-for-woocommerce'),
+                esc_html((string) $completed),
+                esc_html((string) $failed)
             );
             echo '</p></div>';
         }
     }
 
+    // phpcs:enable WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
+
     private function requirePermission(): void
     {
         if (! is_user_logged_in() || ! current_user_can('manage_woocommerce')) {
             wp_die(
-                esc_html__('You cannot manage DetIt catalog audits.', self::TD),
-                esc_html__('Access denied', self::TD),
+                esc_html__('You cannot manage DetIt catalog audits.', 'detit-product-content-generator-for-woocommerce'),
+                esc_html__('Access denied', 'detit-product-content-generator-for-woocommerce'),
                 ['response' => 403]
             );
         }

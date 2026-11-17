@@ -62,9 +62,14 @@ final class ProductGenerateMetaBox
             return;
         }
 
-        $productId = isset($_GET['post'])
-            ? absint(wp_unslash($_GET['post']))
-            : 0;
+        // Read-only GET product ID selects the editor's current product.
+        // No state changes occur here; REST apply uses separate authorization.
+        // No form is submitted or product content changed here: this reads
+        // the currently opened WooCommerce product editor's GET post ID.
+        // The later Generate/Apply REST actions enforce their own permissions
+        // and nonces, so adding a nonce to this URL lookup is inappropriate.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin product editor URL.
+        $productId = isset($_GET['post']) ? absint(wp_unslash($_GET['post'])) : 0;
 
         if ($productId <= 0 || ! function_exists('wc_get_product')) {
             return;
@@ -363,7 +368,7 @@ final class ProductGenerateMetaBox
                                     checked>
                                 <?php
                                 esc_html_e(
-                                    'Meta description',
+                                    'SEO meta description (preview only)',
                                     'detit-product-content-generator-for-woocommerce'
                                 );
                                 ?>
@@ -548,6 +553,13 @@ final class ProductGenerateMetaBox
                                                     'detit-product-content-generator-for-woocommerce'
                                                 );
                                                 ?>"></textarea>
+
+                            <p class="description">
+                                <?php esc_html_e(
+                                    'For stronger, search-friendly descriptions, add verified product specifications, materials, size or use details to the product record or here. DetIt will not invent facts just to make text longer.',
+                                    'detit-product-content-generator-for-woocommerce'
+                                ); ?>
+                            </p>
 
                         </div>
 

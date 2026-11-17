@@ -47,15 +47,17 @@ final class BatchCatalogAuditor
         // The query only reads catalog post IDs. No direct product SQL writes.
         // Include private/draft products so authorized merchants can audit
         // non-public catalog work; exclude trash and product variations.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit audit scans must see live product IDs.
         $ids = $wpdb->get_col(
             $wpdb->prepare(
                 "SELECT ID
-                FROM {$wpdb->posts}
+                FROM %i
                 WHERE post_type = %s
                   AND post_status IN ('publish', 'private', 'draft', 'pending', 'future')
                   AND ID > %d
                 ORDER BY ID ASC
                 LIMIT %d",
+                $wpdb->posts,
                 'product',
                 $afterProductId,
                 $limit + 1

@@ -312,6 +312,29 @@ body.detit-modal-open {
     line-height: 1.5;
 }
 
+/* Keep the safely reconstructed WooCommerce HTML easy to review. */
+.detit-preview-content p {
+    margin: 0 0 10px;
+}
+
+.detit-preview-content h2,
+.detit-preview-content h3 {
+    margin: 14px 0 6px;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 600;
+}
+
+.detit-preview-content ul,
+.detit-preview-content ol {
+    margin: 6px 0 12px 20px;
+    padding-left: 4px;
+}
+
+.detit-preview-content li {
+    margin-bottom: 4px;
+}
+
 /*
  * Smaller screens and narrow laptop layouts.
  */
